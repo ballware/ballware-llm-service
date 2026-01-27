@@ -1,4 +1,9 @@
+using Ballware.Llm.Api;
+using Ballware.Llm.Api.Endpoints;
+using Ballware.Llm.Service.Adapter;
 using Ballware.Llm.Service.Configuration;
+using Ballware.Llm.Service.Mappings;
+using Ballware.Meta.Service.Client;
 using Ballware.Shared.Api.Endpoints;
 using Ballware.Shared.Authorization;
 using Ballware.Shared.Authorization.Jint;
@@ -32,6 +37,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         AuthorizationOptions? authorizationOptions =
             Configuration.GetSection("Authorization").Get<AuthorizationOptions>();
         SwaggerOptions? swaggerOptions = Configuration.GetSection("Swagger").Get<SwaggerOptions>();
+        ServiceClientOptions? metaClientOptions = Configuration.GetSection("MetaClient").Get<ServiceClientOptions>();
         
         Services.AddOptionsWithValidateOnStart<AuthorizationOptions>()
             .Bind(Configuration.GetSection("Authorization"))
@@ -41,9 +47,18 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
             .Bind(Configuration.GetSection("Swagger"))
             .ValidateDataAnnotations();
         
+        Services.AddOptionsWithValidateOnStart<ServiceClientOptions>()
+            .Bind(Configuration.GetSection("MetaClient"))
+            .ValidateDataAnnotations();
+        
         if (authorizationOptions == null)
         {
             throw new ConfigurationException("Required configuration for authorization is missing");
+        }
+        
+        if (metaClientOptions == null)
+        {
+            throw new ConfigurationException("Required configuration for metaClient is missing");
         }
         
         Services.AddMemoryCache();
@@ -62,6 +77,23 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
             options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
             {
                 ValidIssuer = authorizationOptions.Authority
+            };
+            
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    var accessToken = context.Request.Query["access_token"];
+
+                    var path = context.HttpContext.Request.Path;
+                    if (!string.IsNullOrEmpty(accessToken) &&
+                        path.StartsWithSegments("/ai/hubs"))
+                    {
+                        context.Token = accessToken;
+                    }
+
+                    return Task.CompletedTask;
+                }
             };
         });
 
@@ -89,7 +121,8 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
                 {
                     c.WithOrigins(corsOptions.AllowedOrigins)
                         .WithMethods(corsOptions.AllowedMethods)
-                        .WithHeaders(corsOptions.AllowedHeaders);
+                        .WithHeaders(corsOptions.AllowedHeaders)
+                        .AllowCredentials();
                 });
             });
         }
@@ -103,18 +136,49 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         {
             options.SerializerOptions.PropertyNamingPolicy = null;
         });
+
+        Services.AddClientCredentialsTokenManagement()
+            .AddClient("meta", client =>
+            {
+                client.TokenEndpoint = metaClientOptions.TokenEndpoint;
+
+                client.ClientId = metaClientOptions.ClientId;
+                client.ClientSecret = metaClientOptions.ClientSecret;
+
+                client.Scope = metaClientOptions.Scopes;
+            });
+        
+        Services.AddHttpClient<MetaServiceClient>(client =>
+            {
+                client.BaseAddress = new Uri(metaClientOptions.ServiceUrl);
+            })
+#if DEBUG            
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler()
+            {
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            })
+#endif                  
+            .AddClientCredentialsTokenHandler("meta");        
+        
+        Services.AddAutoMapper(config =>
+        {
+            config.AddProfile<MetaServiceLlmMetadataProfile>();
+        });
         
         Services.AddHttpContextAccessor();
 
         Services.AddMvcCore()
             .AddApiExplorer();
 
+        Services.AddSignalR();
         Services.AddControllers();
         
         Services.AddBallwareSharedJintRightsChecker();
         Services.AddBallwareSharedApiDependencies();
         
         Services.AddBallwareSharedAuthorizationUtils(authorizationOptions.TenantClaim, authorizationOptions.UserIdClaim, authorizationOptions.RightClaim);
+        
+        Services.AddScoped<IAuthorizationMetadataProvider, MetaServiceMetadataAdapter>();
         
         Services.AddEndpointsApiExplorer();
         
@@ -194,6 +258,8 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         app.UseRouting();
 
         app.UseAuthorization();
+
+        app.MapChatEndpoint("ai/hubs");
         
         var authorizationOptions = app.Services.GetService<IOptions<AuthorizationOptions>>()?.Value;
         var swaggerOptions = app.Services.GetService<IOptions<SwaggerOptions>>()?.Value;

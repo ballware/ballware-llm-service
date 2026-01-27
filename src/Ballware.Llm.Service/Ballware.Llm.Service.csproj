@@ -10,6 +10,7 @@
 
     <ItemGroup>
         <PackageReference Include="AutoMapper" Version="13.0.1" />
+        <PackageReference Include="ballware.meta.service.client" Version="1.2.0" />
         <PackageReference Include="ballware.shared.api.endpoints" Version="0.1.0" />
         <PackageReference Include="ballware.shared.authorization" Version="0.1.0" />
         <PackageReference Include="Ballware.Shared.Authorization.Jint" Version="0.1.0" />
@@ -32,5 +33,13 @@
         <None Update="appsettings.local.json">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
+        <None Update="appsettings.Development.json">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Ballware.Llm.Api\Ballware.Llm.Api.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Metadata\Ballware.Llm.Metadata.csproj" />
     </ItemGroup>
 </Project>

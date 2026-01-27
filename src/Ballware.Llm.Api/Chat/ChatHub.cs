@@ -6,5 +6,8 @@ namespace Ballware.Llm.Api.Chat;
 [Authorize]
 public class ChatHub : Hub
 {
-    public Task Ping() => Clients.All.SendAsync("Pong");
+    public async Task Prompt(string message)
+    {
+        await Clients.All.SendAsync("Response", message + " received");
+    }
 }

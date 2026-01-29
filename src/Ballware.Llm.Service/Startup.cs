@@ -1,5 +1,7 @@
 using Ballware.Llm.Api;
 using Ballware.Llm.Api.Endpoints;
+using Ballware.Llm.Ollama;
+using Ballware.Llm.Ollama.Configuration;
 using Ballware.Llm.Service.Adapter;
 using Ballware.Llm.Service.Configuration;
 using Ballware.Llm.Service.Mappings;
@@ -37,6 +39,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         AuthorizationOptions? authorizationOptions =
             Configuration.GetSection("Authorization").Get<AuthorizationOptions>();
         SwaggerOptions? swaggerOptions = Configuration.GetSection("Swagger").Get<SwaggerOptions>();
+        OllamaOptions? ollamaOptions = Configuration.GetSection("Ollama").Get<OllamaOptions>();
         ServiceClientOptions? metaClientOptions = Configuration.GetSection("MetaClient").Get<ServiceClientOptions>();
         
         Services.AddOptionsWithValidateOnStart<AuthorizationOptions>()
@@ -47,6 +50,10 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
             .Bind(Configuration.GetSection("Swagger"))
             .ValidateDataAnnotations();
         
+        Services.AddOptionsWithValidateOnStart<OllamaOptions>()
+            .Bind(Configuration.GetSection("Ollama"))
+            .ValidateDataAnnotations();
+       
         Services.AddOptionsWithValidateOnStart<ServiceClientOptions>()
             .Bind(Configuration.GetSection("MetaClient"))
             .ValidateDataAnnotations();
@@ -54,6 +61,11 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         if (authorizationOptions == null)
         {
             throw new ConfigurationException("Required configuration for authorization is missing");
+        }
+
+        if (ollamaOptions == null)
+        {
+            throw new ConfigurationException("Required configuration for ollama is missing");
         }
         
         if (metaClientOptions == null)
@@ -179,6 +191,9 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         Services.AddBallwareSharedAuthorizationUtils(authorizationOptions.TenantClaim, authorizationOptions.UserIdClaim, authorizationOptions.RightClaim);
         
         Services.AddScoped<IAuthorizationMetadataProvider, MetaServiceMetadataAdapter>();
+
+        Services.AddBallwareLlmApiDependencies();
+        Services.AddBallwareOllamaModelBridge(ollamaOptions);
         
         Services.AddEndpointsApiExplorer();
         

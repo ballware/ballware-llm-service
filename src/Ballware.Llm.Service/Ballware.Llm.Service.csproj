@@ -41,5 +41,6 @@
     <ItemGroup>
       <ProjectReference Include="..\Ballware.Llm.Api\Ballware.Llm.Api.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Metadata\Ballware.Llm.Metadata.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Ollama\Ballware.Llm.Ollama.csproj" />
     </ItemGroup>
 </Project>

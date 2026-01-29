@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ballware.Llm.Api", "src\Bal
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ballware.Llm.Metadata", "src\Ballware.Llm.Metadata\Ballware.Llm.Metadata.csproj", "{DEB75275-63E2-44C0-9130-98B87646E6CF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ballware.Llm.Ollama", "src\Ballware.Llm.Ollama\Ballware.Llm.Ollama.csproj", "{9198E8C4-5FE7-4BA9-9F1B-DBB806B4CF5C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{DEB75275-63E2-44C0-9130-98B87646E6CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DEB75275-63E2-44C0-9130-98B87646E6CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DEB75275-63E2-44C0-9130-98B87646E6CF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9198E8C4-5FE7-4BA9-9F1B-DBB806B4CF5C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9198E8C4-5FE7-4BA9-9F1B-DBB806B4CF5C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9198E8C4-5FE7-4BA9-9F1B-DBB806B4CF5C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9198E8C4-5FE7-4BA9-9F1B-DBB806B4CF5C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

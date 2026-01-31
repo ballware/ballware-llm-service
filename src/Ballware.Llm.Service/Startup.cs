@@ -1,5 +1,7 @@
 using Ballware.Llm.Api;
 using Ballware.Llm.Api.Endpoints;
+using Ballware.Llm.Data.Ef.Configuration;
+using Ballware.Llm.Data.Ef.Postgres;
 using Ballware.Llm.Ollama;
 using Ballware.Llm.Ollama.Configuration;
 using Ballware.Llm.Service.Adapter;
@@ -9,6 +11,7 @@ using Ballware.Meta.Service.Client;
 using Ballware.Shared.Api.Endpoints;
 using Ballware.Shared.Authorization;
 using Ballware.Shared.Authorization.Jint;
+using Duende.AccessTokenManagement;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
@@ -20,8 +23,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Logging;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Serilog;
+using Scope = Duende.AccessTokenManagement.Scope;
 
 namespace Ballware.Llm.Service;
 
@@ -39,8 +43,11 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         AuthorizationOptions? authorizationOptions =
             Configuration.GetSection("Authorization").Get<AuthorizationOptions>();
         SwaggerOptions? swaggerOptions = Configuration.GetSection("Swagger").Get<SwaggerOptions>();
+        LlmStorageOptions? llmStorageOptions = Configuration.GetSection("Llm").Get<LlmStorageOptions>();
         OllamaOptions? ollamaOptions = Configuration.GetSection("Ollama").Get<OllamaOptions>();
         ServiceClientOptions? metaClientOptions = Configuration.GetSection("MetaClient").Get<ServiceClientOptions>();
+        
+        var llmStorageConnectionString = Configuration.GetConnectionString("LlmStorageConnection");
         
         Services.AddOptionsWithValidateOnStart<AuthorizationOptions>()
             .Bind(Configuration.GetSection("Authorization"))
@@ -48,6 +55,10 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         
         Services.AddOptionsWithValidateOnStart<SwaggerOptions>()
             .Bind(Configuration.GetSection("Swagger"))
+            .ValidateDataAnnotations();
+        
+        Services.AddOptionsWithValidateOnStart<LlmStorageOptions>()
+            .Bind(Configuration.GetSection("Llm"))
             .ValidateDataAnnotations();
         
         Services.AddOptionsWithValidateOnStart<OllamaOptions>()
@@ -63,6 +74,11 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
             throw new ConfigurationException("Required configuration for authorization is missing");
         }
 
+        if (llmStorageOptions == null || string.IsNullOrEmpty(llmStorageConnectionString))
+        {
+            throw new ConfigurationException("Required configuration for llm storage is missing");
+        }
+        
         if (ollamaOptions == null)
         {
             throw new ConfigurationException("Required configuration for ollama is missing");
@@ -152,12 +168,12 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         Services.AddClientCredentialsTokenManagement()
             .AddClient("meta", client =>
             {
-                client.TokenEndpoint = metaClientOptions.TokenEndpoint;
+                client.TokenEndpoint = new Uri(metaClientOptions.TokenEndpoint);
 
-                client.ClientId = metaClientOptions.ClientId;
-                client.ClientSecret = metaClientOptions.ClientSecret;
+                client.ClientId = ClientId.Parse(metaClientOptions.ClientId);
+                client.ClientSecret = ClientSecret.Parse(metaClientOptions.ClientSecret);
 
-                client.Scope = metaClientOptions.Scopes;
+                client.Scope = Scope.Parse(metaClientOptions.Scopes);
             });
         
         Services.AddHttpClient<MetaServiceClient>(client =>
@@ -170,7 +186,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
                 ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
             })
 #endif                  
-            .AddClientCredentialsTokenHandler("meta");        
+            .AddClientCredentialsTokenHandler(ClientCredentialsClientName.Parse("meta"));        
         
         Services.AddAutoMapper(config =>
         {
@@ -190,6 +206,12 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         
         Services.AddBallwareSharedAuthorizationUtils(authorizationOptions.TenantClaim, authorizationOptions.UserIdClaim, authorizationOptions.RightClaim);
         
+        if ("postgres".Equals(llmStorageOptions.Provider, StringComparison.InvariantCultureIgnoreCase) &&
+            !string.IsNullOrEmpty(llmStorageConnectionString))
+        {
+            Services.AddBallwareLlmStorageForPostgres(llmStorageOptions, llmStorageConnectionString);
+        }
+        
         Services.AddScoped<IAuthorizationMetadataProvider, MetaServiceMetadataAdapter>();
 
         Services.AddBallwareLlmApiDependencies();
@@ -201,13 +223,13 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         {
             Services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("llm", new Microsoft.OpenApi.Models.OpenApiInfo
+                c.SwaggerDoc("llm", new OpenApiInfo
                 {
                     Title = "ballware LLM user API",
                     Version = "v1"
                 });
                 
-                c.SwaggerDoc("service", new Microsoft.OpenApi.Models.OpenApiInfo
+                c.SwaggerDoc("service", new OpenApiInfo
                 {
                     Title = "ballware LLM service API",
                     Version = "v1"
@@ -217,17 +239,15 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
 
                 c.AddSecurityDefinition("oidc", new OpenApiSecurityScheme
                 {
-                    Type = Microsoft.OpenApi.Models.SecuritySchemeType.OpenIdConnect,
+                    Type = SecuritySchemeType.OpenIdConnect,
                     OpenIdConnectUrl = new Uri(authorizationOptions.Authority + "/.well-known/openid-configuration")
                 });
 
-                c.AddSecurityRequirement(new OpenApiSecurityRequirement
+                c.AddSecurityRequirement((document) => new OpenApiSecurityRequirement
                 {
                     {
-                        new OpenApiSecurityScheme {
-                            Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "oidc" }
-                        },
-                        swaggerOptions.RequiredScopes.Split(" ")
+                        new OpenApiSecuritySchemeReference("oidc", document),
+                        swaggerOptions.RequiredScopes.Split(" ").ToList()
                     }
                 });
             });

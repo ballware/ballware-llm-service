@@ -1,16 +1,20 @@
 using Ballware.Llm.Api;
 using Ballware.Llm.Api.Endpoints;
+using Ballware.Llm.Data.Ef;
 using Ballware.Llm.Data.Ef.Configuration;
 using Ballware.Llm.Data.Ef.Postgres;
 using Ballware.Llm.Ollama;
 using Ballware.Llm.Ollama.Configuration;
 using Ballware.Llm.Service.Adapter;
 using Ballware.Llm.Service.Configuration;
+using Ballware.Llm.Service.Extensions;
 using Ballware.Llm.Service.Mappings;
 using Ballware.Meta.Service.Client;
+using Ballware.Storage.Service.Client;
 using Ballware.Shared.Api.Endpoints;
 using Ballware.Shared.Authorization;
 using Ballware.Shared.Authorization.Jint;
+using Ballware.Shared.Data.Repository;
 using Duende.AccessTokenManagement;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
@@ -45,6 +49,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         SwaggerOptions? swaggerOptions = Configuration.GetSection("Swagger").Get<SwaggerOptions>();
         LlmStorageOptions? llmStorageOptions = Configuration.GetSection("Llm").Get<LlmStorageOptions>();
         OllamaOptions? ollamaOptions = Configuration.GetSection("Ollama").Get<OllamaOptions>();
+        ServiceClientOptions? storageClientOptions = Configuration.GetSection("StorageClient").Get<ServiceClientOptions>();
         ServiceClientOptions? metaClientOptions = Configuration.GetSection("MetaClient").Get<ServiceClientOptions>();
         
         var llmStorageConnectionString = Configuration.GetConnectionString("LlmStorageConnection");
@@ -88,6 +93,12 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         {
             throw new ConfigurationException("Required configuration for metaClient is missing");
         }
+
+        if (storageClientOptions == null)
+        {
+            throw new ConfigurationException("Required configuration for storageClient is missing");       
+        }
+            
         
         Services.AddMemoryCache();
         Services.AddDistributedMemoryCache();
@@ -174,7 +185,28 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
                 client.ClientSecret = ClientSecret.Parse(metaClientOptions.ClientSecret);
 
                 client.Scope = Scope.Parse(metaClientOptions.Scopes);
+            })
+            .AddClient("storage", client =>
+            {
+                client.TokenEndpoint = new Uri(storageClientOptions.TokenEndpoint);
+
+                client.ClientId = ClientId.Parse(storageClientOptions.ClientId);
+                client.ClientSecret = ClientSecret.Parse(storageClientOptions.ClientSecret);
+
+                client.Scope = Scope.Parse(storageClientOptions.Scopes);
             });
+        
+        Services.AddHttpClient<StorageServiceClient>(client =>
+            {
+                client.BaseAddress = new Uri(storageClientOptions.ServiceUrl);
+            })
+#if DEBUG            
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler()
+            {
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            })
+#endif            
+            .AddClientCredentialsTokenHandler(ClientCredentialsClientName.Parse("storage"));
         
         Services.AddHttpClient<MetaServiceClient>(client =>
             {
@@ -190,6 +222,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         
         Services.AddAutoMapper(config =>
         {
+            config.AddBallwareLlmStorageMappings();
             config.AddProfile<MetaServiceLlmMetadataProfile>();
         });
         
@@ -213,6 +246,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         }
         
         Services.AddScoped<IAuthorizationMetadataProvider, MetaServiceMetadataAdapter>();
+        Services.AddScoped<ITenantableRepositoryHook<Data.Public.Origin, Data.Persistables.Origin>, OriginPayloadRepositoryHook>();
 
         Services.AddBallwareLlmApiDependencies();
         Services.AddBallwareOllamaModelBridge(ollamaOptions);

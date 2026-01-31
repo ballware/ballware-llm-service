@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Ballware.Shared.Data.Persistables;
 
@@ -26,4 +27,28 @@ public class Origin : IEntity, ITenantable, IAuditable
 
     [Column("last_change_stamp")]
     public virtual DateTime? LastChangeStamp { get; set; }
+    
+    [Column("name")]
+    [Required]
+    public string Name { get; set; }
+    
+    [Column("description")]
+    public string Description { get; set; }
+    
+    [Column("owner_entity")]
+    [Required]
+    public virtual string OwnerEntity { get; set; }
+    
+    [Column("owner_id")]
+    [Required]
+    public virtual Guid OwnerId { get; set; }
+    
+    [Column("refering_entity")]
+    [Required]
+    public virtual string ReferingEntity { get; set; }
+    
+    [Column("refering_id")]
+    [Required]
+    public virtual Guid ReferingId { get; set; }
+    
 }

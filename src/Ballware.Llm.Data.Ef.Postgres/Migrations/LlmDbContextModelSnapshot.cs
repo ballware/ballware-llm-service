@@ -125,6 +125,11 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("creator_id");
 
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
                     b.Property<DateTime?>("LastChangeStamp")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_change_stamp");
@@ -132,6 +137,29 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
                     b.Property<Guid?>("LastChangerId")
                         .HasColumnType("uuid")
                         .HasColumnName("last_changer_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<string>("OwnerEntity")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("owner_entity");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_id");
+
+                    b.Property<string>("ReferingEntity")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("refering_entity");
+
+                    b.Property<Guid>("ReferingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("refering_id");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
@@ -146,6 +174,9 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
                     b.HasIndex("TenantId");
 
                     b.HasIndex("TenantId", "Uuid")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "OwnerEntity", "OwnerId", "Name")
                         .IsUnique();
 
                     b.ToTable("origin");

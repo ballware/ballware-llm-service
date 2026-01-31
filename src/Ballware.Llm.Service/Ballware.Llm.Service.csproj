@@ -11,6 +11,7 @@
     <ItemGroup>
         <PackageReference Include="AutoMapper" Version="16.0.0" />
         <PackageReference Include="ballware.meta.service.client" Version="1.2.0" />
+        <PackageReference Include="ballware.storage.service.client" Version="9.3.0" />
         <PackageReference Include="ballware.shared.api.endpoints" Version="0.1.0" />
         <PackageReference Include="ballware.shared.authorization" Version="0.1.0" />
         <PackageReference Include="Ballware.Shared.Authorization.Jint" Version="0.1.0" />

@@ -41,6 +41,7 @@ public class LlmModelBaseCustomizer<TOrigin, TEmbedding, TChunk>
         modelBuilder.Entity<TOrigin>().HasKey(d => d.Id);
         modelBuilder.Entity<TOrigin>().HasIndex(d => new { d.TenantId, d.Uuid }).IsUnique();
         modelBuilder.Entity<TOrigin>().HasIndex(d => d.TenantId);
+        modelBuilder.Entity<TOrigin>().HasIndex(d => new { d.TenantId, d.OwnerEntity, d.OwnerId, d.Name }).IsUnique();
         
         modelBuilder.Entity<TEmbedding>().HasKey(d => d.Id);
         modelBuilder.Entity<TEmbedding>().HasIndex(d => new { d.TenantId, d.Uuid }).IsUnique();

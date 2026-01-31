@@ -338,15 +338,14 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         app.UseAuthorization();
 
         app.MapChatEndpoint("ai/hubs");
-        app.MapTenantableEditingApi<Data.Public.Origin>("/llm/origin", "meta", "origin", "Origin", "Origin", "mlApi", "origin");
-        app.MapTenantableEditingApi<Data.Public.Embedding>("/llm/embedding", "meta", "embedding", "Embedding", "Embedding", "mlApi", "embedding");
+        app.MapTenantableEditingApi<Data.Public.Origin>("/llm/origin", "meta", "origin", "Origin", "Origin", "mlApi", "llm");
+        app.MapTenantableEditingApi<Data.Public.Embedding>("/llm/embedding", "meta", "embedding", "Embedding", "Embedding", "mlApi", "llm");
         
         var authorizationOptions = app.Services.GetService<IOptions<AuthorizationOptions>>()?.Value;
         var swaggerOptions = app.Services.GetService<IOptions<SwaggerOptions>>()?.Value;
 
         if (swaggerOptions != null && authorizationOptions != null)
         {
-            app.MapSwagger();
 
             app.UseSwagger();
 

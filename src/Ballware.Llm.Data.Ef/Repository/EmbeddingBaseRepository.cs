@@ -6,7 +6,7 @@ using Ballware.Shared.Data.Repository;
 namespace Ballware.Llm.Data.Ef.Repository;
 
 public class EmbeddingBaseRepository(IMapper mapper, ILlmDbContext dbContext, ITenantableRepositoryHook<Public.Embedding, Persistables.Embedding>? hook = null) 
-    : TenantableRepository<Public.Embedding, Persistables.Embedding>(mapper, dbContext, hook), IEmbeddingRepository
+    : TenantableBaseRepository<Public.Embedding, Persistables.Embedding>(mapper, dbContext, hook), IEmbeddingRepository
 {
     
 }

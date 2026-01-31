@@ -3,6 +3,7 @@ using Ballware.Llm.Api.Endpoints;
 using Ballware.Llm.Data.Ef;
 using Ballware.Llm.Data.Ef.Configuration;
 using Ballware.Llm.Data.Ef.Postgres;
+using Ballware.Llm.Jobs;
 using Ballware.Llm.Ollama;
 using Ballware.Llm.Ollama.Configuration;
 using Ballware.Llm.Service.Adapter;
@@ -10,6 +11,7 @@ using Ballware.Llm.Service.Configuration;
 using Ballware.Llm.Service.Extensions;
 using Ballware.Llm.Service.Mappings;
 using Ballware.Meta.Service.Client;
+using Ballware.Shared.Api;
 using Ballware.Storage.Service.Client;
 using Ballware.Shared.Api.Endpoints;
 using Ballware.Shared.Authorization;
@@ -29,6 +31,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi;
 using Serilog;
+using Quartz;
 using Scope = Duende.AccessTokenManagement.Scope;
 
 namespace Ballware.Llm.Service;
@@ -234,6 +237,9 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         Services.AddSignalR();
         Services.AddControllers();
         
+        Services.Configure<QuartzOptions>(Configuration.GetSection("Quartz"));
+        Services.AddBallwareLlmBackgroundJobs();
+        
         Services.AddBallwareSharedJintRightsChecker();
         Services.AddBallwareSharedApiDependencies();
         
@@ -246,6 +252,9 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         }
         
         Services.AddScoped<IAuthorizationMetadataProvider, MetaServiceMetadataAdapter>();
+        Services.AddScoped<IJobMetadataProvider, MetaServiceMetadataAdapter>();
+        Services.AddScoped<IExportMetadataProvider, MetaServiceMetadataAdapter>();
+        Services.AddScoped<IFileStorageProvider, StorageServiceFileStorageAdapter>();
         Services.AddScoped<ITenantableRepositoryHook<Data.Public.Origin, Data.Persistables.Origin>, OriginPayloadRepositoryHook>();
 
         Services.AddBallwareLlmApiDependencies();
@@ -329,6 +338,8 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         app.UseAuthorization();
 
         app.MapChatEndpoint("ai/hubs");
+        app.MapTenantableEditingApi<Data.Public.Origin>("/llm/origin", "meta", "origin", "Origin", "Origin", "mlApi", "origin");
+        app.MapTenantableEditingApi<Data.Public.Embedding>("/llm/embedding", "meta", "embedding", "Embedding", "Embedding", "mlApi", "embedding");
         
         var authorizationOptions = app.Services.GetService<IOptions<AuthorizationOptions>>()?.Value;
         var swaggerOptions = app.Services.GetService<IOptions<SwaggerOptions>>()?.Value;

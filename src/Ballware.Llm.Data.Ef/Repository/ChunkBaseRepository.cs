@@ -6,7 +6,7 @@ using Ballware.Shared.Data.Repository;
 namespace Ballware.Llm.Data.Ef.Repository;
 
 public class ChunkBaseRepository(IMapper mapper, ILlmDbContext dbContext, ITenantableRepositoryHook<Public.Chunk, Persistables.Chunk>? hook = null) 
-    : TenantableRepository<Public.Chunk, Persistables.Chunk>(mapper, dbContext, hook), IChunkRepository
+    : TenantableBaseRepository<Public.Chunk, Persistables.Chunk>(mapper, dbContext, hook), IChunkRepository
 {
     
 }

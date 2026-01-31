@@ -6,7 +6,7 @@ using Ballware.Shared.Data.Repository;
 namespace Ballware.Llm.Data.Ef.Repository;
 
 public class OriginBaseRepository(IMapper mapper, ILlmDbContext dbContext, ITenantableRepositoryHook<Public.Origin, Persistables.Origin>? hook = null) 
-    : TenantableRepository<Public.Origin, Persistables.Origin>(mapper, dbContext, hook), IOriginRepository
+    : TenantableBaseRepository<Public.Origin, Persistables.Origin>(mapper, dbContext, hook), IOriginRepository
 {
     
 }

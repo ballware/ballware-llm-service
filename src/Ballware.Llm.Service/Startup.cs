@@ -3,6 +3,8 @@ using Ballware.Llm.Api.Endpoints;
 using Ballware.Llm.Data.Ef;
 using Ballware.Llm.Data.Ef.Configuration;
 using Ballware.Llm.Data.Ef.Postgres;
+using Ballware.Llm.Ingestion.Docling;
+using Ballware.Llm.Ingestion.Docling.Configuration;
 using Ballware.Llm.Jobs;
 using Ballware.Llm.Ollama;
 using Ballware.Llm.Ollama.Configuration;
@@ -52,6 +54,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         SwaggerOptions? swaggerOptions = Configuration.GetSection("Swagger").Get<SwaggerOptions>();
         LlmStorageOptions? llmStorageOptions = Configuration.GetSection("Llm").Get<LlmStorageOptions>();
         OllamaOptions? ollamaOptions = Configuration.GetSection("Ollama").Get<OllamaOptions>();
+        DoclingOptions? doclingOptions = Configuration.GetSection("Docling").Get<DoclingOptions>();
         ServiceClientOptions? storageClientOptions = Configuration.GetSection("StorageClient").Get<ServiceClientOptions>();
         ServiceClientOptions? metaClientOptions = Configuration.GetSection("MetaClient").Get<ServiceClientOptions>();
         
@@ -72,6 +75,10 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         Services.AddOptionsWithValidateOnStart<OllamaOptions>()
             .Bind(Configuration.GetSection("Ollama"))
             .ValidateDataAnnotations();
+        
+        Services.AddOptionsWithValidateOnStart<DoclingOptions>()
+            .Bind(Configuration.GetSection("Docling"))
+            .ValidateDataAnnotations();
        
         Services.AddOptionsWithValidateOnStart<ServiceClientOptions>()
             .Bind(Configuration.GetSection("MetaClient"))
@@ -90,6 +97,11 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         if (ollamaOptions == null)
         {
             throw new ConfigurationException("Required configuration for ollama is missing");
+        }
+
+        if (doclingOptions == null)
+        {
+            throw new ConfigurationException("Required configuration for docling is missing");
         }
         
         if (metaClientOptions == null)
@@ -140,7 +152,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         });
 
         Services.AddAuthorizationBuilder()
-            .AddPolicy("llmApi", policy => policy.RequireAssertion(context =>
+            .AddPolicy("mlApi", policy => policy.RequireAssertion(context =>
                 context.User
                     .Claims
                     .Where(c => ClaimTypeScope == c.Type)
@@ -255,10 +267,12 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         Services.AddScoped<IJobMetadataProvider, MetaServiceMetadataAdapter>();
         Services.AddScoped<IExportMetadataProvider, MetaServiceMetadataAdapter>();
         Services.AddScoped<IFileStorageProvider, StorageServiceFileStorageAdapter>();
+        Services.AddScoped<IJobFileStorageAdapter, StorageServiceFileStorageAdapter>();
         Services.AddScoped<ITenantableRepositoryHook<Data.Public.Origin, Data.Persistables.Origin>, OriginPayloadRepositoryHook>();
 
         Services.AddBallwareLlmApiDependencies();
         Services.AddBallwareOllamaModelBridge(ollamaOptions);
+        Services.AddBallwareIngestionForDocling(doclingOptions);
         
         Services.AddEndpointsApiExplorer();
         
@@ -338,8 +352,9 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         app.UseAuthorization();
 
         app.MapChatEndpoint("ai/hubs");
-        app.MapTenantableEditingApi<Data.Public.Origin>("/llm/origin", "meta", "origin", "Origin", "Origin", "mlApi", "llm");
-        app.MapTenantableEditingApi<Data.Public.Embedding>("/llm/embedding", "meta", "embedding", "Embedding", "Embedding", "mlApi", "llm");
+        app.MapOriginUserApi("/ai/origin");
+        app.MapTenantableEditingApi<Data.Public.Origin>("/ai/origin", "ai", "origin", "Origin", "Origin", "mlApi", "llm");
+        app.MapTenantableEditingApi<Data.Public.Embedding>("/ai/embedding", "ai", "embedding", "Embedding", "Embedding", "mlApi", "llm");
         
         var authorizationOptions = app.Services.GetService<IOptions<AuthorizationOptions>>()?.Value;
         var swaggerOptions = app.Services.GetService<IOptions<SwaggerOptions>>()?.Value;

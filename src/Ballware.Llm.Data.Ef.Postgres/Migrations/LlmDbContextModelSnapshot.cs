@@ -117,6 +117,12 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("content_type");
+
                     b.Property<DateTime?>("CreateStamp")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("create_stamp");
@@ -140,12 +146,14 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
                         .HasColumnName("name");
 
                     b.Property<string>("OwnerEntity")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
                         .HasColumnName("owner_entity");
 
                     b.Property<Guid>("OwnerId")
@@ -154,7 +162,8 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
 
                     b.Property<string>("ReferingEntity")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
                         .HasColumnName("refering_entity");
 
                     b.Property<Guid>("ReferingId")

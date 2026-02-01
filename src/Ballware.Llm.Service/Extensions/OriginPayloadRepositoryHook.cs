@@ -9,13 +9,13 @@ public class OriginPayloadRepositoryHook(StorageServiceClient storageClient) : I
     {
         if ("primary".Equals(identifier, StringComparison.InvariantCultureIgnoreCase))
         {
-            var reportBinaryResponse = storageClient.AttachmentDownloadForTenantEntityAndOwnerByFilename(tenantId, "origin", value.Id, "payload.txt");
+            var reportBinaryResponse = storageClient.AttachmentDownloadForTenantEntityAndOwnerByFilename(tenantId, "origin", value.Id, CreatePayloadFileName(value.ContentType));
 
             if (reportBinaryResponse != null)
             {
                 using var reader = new StreamReader(stream: reportBinaryResponse.Stream, encoding: System.Text.Encoding.Unicode);
                 
-                value.Payload = reader.ReadToEnd();
+                value.Content = reader.ReadToEnd();
             }
         }
 
@@ -26,19 +26,24 @@ public class OriginPayloadRepositoryHook(StorageServiceClient storageClient) : I
     {
         if ("primary".Equals(identifier, StringComparison.InvariantCultureIgnoreCase))
         {
-            if (!string.IsNullOrEmpty(value.Payload) && userId != null)
+            if (!string.IsNullOrEmpty(value.Content) && userId != null)
             {
-                var bytes = System.Text.Encoding.Unicode.GetBytes(value.Payload);
+                var bytes = System.Text.Encoding.Unicode.GetBytes(value.Content);
                 using var stream = new MemoryStream(bytes);
                 
                 storageClient.AttachmentUploadForTenantEntityAndOwnerBehalfOfUser(tenantId, userId.Value, "origin", value.Id,
-                    [new FileParameter(stream, "payload.txt", "text/plain")]);
+                    [new FileParameter(stream, CreatePayloadFileName(value.ContentType), value.ContentType)]);
             }
         }
     }
 
     public void BeforeRemove(Guid tenantId, Guid? userId, IDictionary<string, object> claims, Data.Persistables.Origin persistable)
     {
-        storageClient.AttachmentDropForTenantEntityAndOwnerByFilenameBehalfOfUser(tenantId, userId.Value, "origin", persistable.Uuid, "payload.txt");
+        storageClient.AttachmentDropForTenantEntityAndOwnerByFilenameBehalfOfUser(tenantId, userId.Value, "origin", persistable.Uuid, CreatePayloadFileName(persistable.ContentType));
+    }
+
+    private static string CreatePayloadFileName(string contentType)
+    {
+        return $"payload{MimeTypes.MimeTypeMap.GetExtension(contentType)}";
     }
 }

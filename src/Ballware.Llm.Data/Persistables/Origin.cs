@@ -30,6 +30,7 @@ public class Origin : IEntity, ITenantable, IAuditable
     
     [Column("name")]
     [Required]
+    [MaxLength(100)]
     public string Name { get; set; }
     
     [Column("description")]
@@ -37,6 +38,7 @@ public class Origin : IEntity, ITenantable, IAuditable
     
     [Column("owner_entity")]
     [Required]
+    [MaxLength(100)]
     public virtual string OwnerEntity { get; set; }
     
     [Column("owner_id")]
@@ -45,10 +47,15 @@ public class Origin : IEntity, ITenantable, IAuditable
     
     [Column("refering_entity")]
     [Required]
+    [MaxLength(100)]
     public virtual string ReferingEntity { get; set; }
     
     [Column("refering_id")]
     [Required]
     public virtual Guid ReferingId { get; set; }
     
+    [Column("content_type")]
+    [Required]
+    [MaxLength(100)]
+    public virtual string ContentType { get; set; }
 }

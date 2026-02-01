@@ -1,3 +1,4 @@
+using Ballware.Llm.Data.Persistables;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ballware.Llm.Data.Ef.Postgres;
@@ -5,4 +6,8 @@ namespace Ballware.Llm.Data.Ef.Postgres;
 public class LlmDbContext : DbContext, ILlmDbContext
 {
     public LlmDbContext(DbContextOptions<LlmDbContext> options) : base(options) {}
+    
+    public DbSet<Origin>  Origins { get; set; }
+    public DbSet<Embedding>  Embeddings { get; set; }
+    public DbSet<Chunk>  Chunks { get; set; }
 }

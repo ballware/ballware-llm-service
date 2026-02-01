@@ -17,9 +17,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Ballware.Llm.Data\Ballware.Llm.Data.csproj" />
-    </ItemGroup>
-    
-    <ItemGroup>
-      <Folder Include="Internal\" />
+        <ProjectReference Include="..\Ballware.Llm.Ingestion\Ballware.Llm.Ingestion.csproj" />
+        <ProjectReference Include="..\Ballware.Llm.Metadata\Ballware.Llm.Metadata.csproj" />
     </ItemGroup>
 </Project>

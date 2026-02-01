@@ -51,6 +51,7 @@
       <ProjectReference Include="..\Ballware.Llm.Data.Ef.Postgres\Ballware.Llm.Data.Ef.Postgres.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Data.Ef\Ballware.Llm.Data.Ef.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Data\Ballware.Llm.Data.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Ingestion.Docling\Ballware.Llm.Ingestion.Docling.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Jobs\Ballware.Llm.Jobs.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Metadata\Ballware.Llm.Metadata.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Ollama\Ballware.Llm.Ollama.csproj" />

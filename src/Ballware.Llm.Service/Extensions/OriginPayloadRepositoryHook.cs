@@ -44,6 +44,20 @@ public class OriginPayloadRepositoryHook(StorageServiceClient storageClient) : I
 
     private static string CreatePayloadFileName(string contentType)
     {
-        return $"payload{MimeTypes.MimeTypeMap.GetExtension(contentType)}";
+        var evaluatedExtension = MimeTypes.MimeTypeMap.GetExtension(contentType, false);
+
+        if (string.IsNullOrEmpty(evaluatedExtension))
+        {
+            if (contentType.Equals("text/markdown", StringComparison.InvariantCultureIgnoreCase))
+            {
+                evaluatedExtension = ".md";
+            }
+            else
+            {
+                throw new InvalidOperationException("Unsupported content type: " + contentType);
+            }
+        }
+        
+        return $"payload{evaluatedExtension}";
     }
 }

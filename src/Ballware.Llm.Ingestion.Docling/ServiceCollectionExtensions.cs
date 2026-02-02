@@ -1,3 +1,4 @@
+using System.Configuration;
 using Ballware.Llm.Ingestion.Docling.Configuration;
 using Ballware.Llm.Ingestion.Docling.Internal;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,7 +11,19 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton(options);
         services.AddScoped<IDoclingClient, DoclingHttpApiClient>();
-        services.AddScoped<IKnowledgeIngestor, DoclingJsonIngestor>();
+
+        if ("markdown".Equals(options.OutputFormat))
+        {
+            services.AddScoped<IKnowledgeIngestor, DoclingMarkdownIngestor>();
+        } 
+        else if ("json".Equals(options.OutputFormat))
+        {
+            services.AddScoped<IKnowledgeIngestor, DoclingJsonIngestor>();    
+        }
+        else
+        {
+            throw new ConfigurationException($"Unsupported output format: {options.OutputFormat}");
+        }
         
         return services;
     }

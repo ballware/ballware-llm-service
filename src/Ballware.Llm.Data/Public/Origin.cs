@@ -14,6 +14,7 @@ public class Origin : IEditable
     
     public string Name { get; set; }
     public string Description { get; set; }
+    public bool GlobalContext { get; set; }
     
     public string ContentType { get; set; }
     public string Content { get; set; }

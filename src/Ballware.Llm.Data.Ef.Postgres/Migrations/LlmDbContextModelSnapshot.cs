@@ -165,6 +165,10 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
                         .HasColumnType("text")
                         .HasColumnName("description");
 
+                    b.Property<bool>("GlobalContext")
+                        .HasColumnType("boolean")
+                        .HasColumnName("global_context");
+
                     b.Property<DateTime?>("LastChangeStamp")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_change_stamp");

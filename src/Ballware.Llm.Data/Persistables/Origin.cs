@@ -36,6 +36,9 @@ public class Origin : IEntity, ITenantable, IAuditable
     [Column("description")]
     public string Description { get; set; }
     
+    [Column("global_context")]
+    public bool GlobalContext { get; set; }
+    
     [Column("owner_entity")]
     [Required]
     [MaxLength(100)]

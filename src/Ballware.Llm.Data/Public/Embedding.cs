@@ -7,4 +7,5 @@ public class Embedding: IEditable
     public Guid Id { get; set; }
     public Guid OriginId { get; set; }
     public string? Model { get; set; }
+    public bool Active { get; set; }
 }

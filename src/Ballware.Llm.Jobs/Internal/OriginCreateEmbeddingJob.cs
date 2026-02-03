@@ -48,7 +48,8 @@ public class OriginCreateEmbeddingJob(IServiceProvider serviceProvider, IOriginR
         {
             Id = Guid.NewGuid(),
             OriginId = origin.Id,
-            Model = model
+            Model = model,
+            Active = activate,
         };
 
         await embeddingRepository.SaveAsync(tenantId, userId, "primary", ImmutableDictionary<string, object>.Empty,

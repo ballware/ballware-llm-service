@@ -11,5 +11,8 @@ public class OriginAddFromAttachmentRequest
     public required Guid OwnerId { get; set; }
     
     [Required]
+    public required string Name { get; set; }
+    
+    [Required]
     public required Guid AttachmentId { get; set; }
 }

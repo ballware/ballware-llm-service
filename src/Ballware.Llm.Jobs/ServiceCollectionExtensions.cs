@@ -16,6 +16,7 @@ public static class ServiceCollectionExtensions
             var importJobName = "import";
 
             q.AddJob<OriginAddFromAttachmentJob>(OriginAddFromAttachmentJob.Key, configurator => configurator.StoreDurably());
+            q.AddJob<OriginCreateEmbeddingJob>(OriginCreateEmbeddingJob.Key, configurator => configurator.StoreDurably());
             q.AddJob<TenantableImportJob<Data.Public.Origin, ITenantableRepository<Data.Public.Origin>>>(new JobKey(importJobName, "origin"), configurator => configurator.StoreDurably());
             q.AddJob<TenantableImportJob<Data.Public.Embedding, ITenantableRepository<Data.Public.Embedding>>>(new JobKey(importJobName, "embedding"), configurator => configurator.StoreDurably());
         });

@@ -1,5 +1,7 @@
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Ballware.Shared.Data.Persistables;
+using Pgvector;
 
 namespace Ballware.Llm.Data.Persistables;
 
@@ -11,6 +13,16 @@ public class Chunk : IEntity, ITenantable, IAuditable
 
     [Column("uuid")]
     public virtual Guid Uuid { get; set; }
+    
+    [Column("embedding_id")]
+    public virtual Guid EmbeddingId { get; set; }
+
+    [Column("text")]
+    [MaxLength(102400)]
+    public virtual string Text { get; set; }
+    
+    [Column("data", TypeName = "vector(768)")]
+    public virtual Vector Data { get; set; } = default!;
 
     [Column("tenant_id")]
     public virtual Guid TenantId { get; set; }

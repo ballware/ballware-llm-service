@@ -1,4 +1,5 @@
 using AutoMapper;
+using Pgvector;
 
 namespace Ballware.Llm.Data.Ef.Mapping;
 
@@ -22,9 +23,11 @@ class StorageMappingProfile : Profile
         
         CreateMap<Public.Chunk, Persistables.Chunk>()
             .ForMember(dest => dest.Id, opt => opt.Ignore())
-            .ForMember(dest => dest.Uuid, opt => opt.MapFrom(src => src.Id));
+            .ForMember(dest => dest.Uuid, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.Data, opt => opt.MapFrom(src => new Vector(new ReadOnlyMemory<float>(src.Data))));
         
         CreateMap<Persistables.Chunk, Public.Chunk>()
-            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Uuid));
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Uuid))
+            .ForMember(dest => dest.Data, opt => opt.MapFrom(src => src.Data.ToArray()));
     }
 }

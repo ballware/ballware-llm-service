@@ -20,6 +20,7 @@ public static class ServiceCollectionExtensions
         {
             o.UseNpgsql(connectionString, o =>
             {
+                o.UseVector();
                 o.MigrationsAssembly(typeof(LlmDbContext).Assembly.FullName);
             });
 

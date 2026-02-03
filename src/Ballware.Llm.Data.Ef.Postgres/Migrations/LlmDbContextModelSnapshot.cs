@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+using Pgvector;
 
 #nullable disable
 
@@ -39,6 +40,15 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("creator_id");
 
+                    b.Property<Vector>("Data")
+                        .IsRequired()
+                        .HasColumnType("vector(768)")
+                        .HasColumnName("data");
+
+                    b.Property<Guid>("EmbeddingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("embedding_id");
+
                     b.Property<DateTime?>("LastChangeStamp")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_change_stamp");
@@ -50,6 +60,12 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(102400)
+                        .HasColumnType("character varying(102400)")
+                        .HasColumnName("text");
 
                     b.Property<Guid>("Uuid")
                         .HasColumnType("uuid")
@@ -74,6 +90,10 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean")
+                        .HasColumnName("active");
+
                     b.Property<DateTime?>("CreateStamp")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("create_stamp");
@@ -89,6 +109,15 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
                     b.Property<Guid?>("LastChangerId")
                         .HasColumnType("uuid")
                         .HasColumnName("last_changer_id");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("model");
+
+                    b.Property<Guid>("OriginId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("origin_id");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")

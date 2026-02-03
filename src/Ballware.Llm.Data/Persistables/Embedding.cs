@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Ballware.Shared.Data.Persistables;
 
@@ -14,6 +15,17 @@ public class Embedding : IEntity, ITenantable, IAuditable
 
     [Column("tenant_id")]
     public virtual Guid TenantId { get; set; }
+    
+    [Column("origin_id")]
+    [Required]
+    public virtual Guid OriginId { get; set; }
+    
+    [Column("model")]
+    [Required]
+    public virtual string? Model { get; set; }
+    
+    [Column("active")]
+    public virtual bool Active { get; set; }
     
     [Column("creator_id")]
     public virtual Guid? CreatorId { get; set; }

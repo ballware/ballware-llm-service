@@ -3,6 +3,7 @@ using Ballware.Llm.Api.Endpoints;
 using Ballware.Llm.Data.Ef;
 using Ballware.Llm.Data.Ef.Configuration;
 using Ballware.Llm.Data.Ef.Postgres;
+using Ballware.Llm.Embedding;
 using Ballware.Llm.Ingestion.Docling;
 using Ballware.Llm.Ingestion.Docling.Configuration;
 using Ballware.Llm.Jobs;
@@ -273,6 +274,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         Services.AddBallwareLlmApiDependencies();
         Services.AddBallwareOllamaModelBridge(ollamaOptions);
         Services.AddBallwareIngestionForDocling(doclingOptions);
+        Services.AddBallwareEmbeddingChunker();
         
         Services.AddEndpointsApiExplorer();
         

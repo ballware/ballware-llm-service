@@ -17,7 +17,9 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Ballware.Llm.Data\Ballware.Llm.Data.csproj" />
+        <ProjectReference Include="..\Ballware.Llm.Embedding\Ballware.Llm.Embedding.csproj" />
         <ProjectReference Include="..\Ballware.Llm.Ingestion\Ballware.Llm.Ingestion.csproj" />
         <ProjectReference Include="..\Ballware.Llm.Metadata\Ballware.Llm.Metadata.csproj" />
+        <ProjectReference Include="..\Ballware.Llm.Ollama\Ballware.Llm.Ollama.csproj" />
     </ItemGroup>
 </Project>

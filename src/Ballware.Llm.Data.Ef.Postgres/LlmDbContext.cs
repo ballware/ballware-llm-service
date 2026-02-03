@@ -7,6 +7,11 @@ public class LlmDbContext : DbContext, ILlmDbContext
 {
     public LlmDbContext(DbContextOptions<LlmDbContext> options) : base(options) {}
     
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.HasPostgresExtension("vector");
+    }
+    
     public DbSet<Origin>  Origins { get; set; }
     public DbSet<Embedding>  Embeddings { get; set; }
     public DbSet<Chunk>  Chunks { get; set; }

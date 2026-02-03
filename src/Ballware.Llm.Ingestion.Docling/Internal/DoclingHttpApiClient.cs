@@ -36,6 +36,7 @@ public class DoclingHttpApiClient(DoclingOptions options) : IDoclingClient
     public async Task<string> ConvertToJsonAsync(string type, Stream input)
     {
         using var httpClient = new HttpClient();
+        httpClient.Timeout = TimeSpan.FromSeconds(options.RequestTimeoutSeconds);
         
         httpClient.BaseAddress = new Uri(options.Url);
 
@@ -65,6 +66,7 @@ public class DoclingHttpApiClient(DoclingOptions options) : IDoclingClient
     public async Task<string> ConvertToMarkdownAsync(string type, Stream input)
     {
         using var httpClient = new HttpClient();
+        httpClient.Timeout = TimeSpan.FromSeconds(options.RequestTimeoutSeconds);
         
         httpClient.BaseAddress = new Uri(options.Url);
 

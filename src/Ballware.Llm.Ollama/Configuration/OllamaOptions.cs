@@ -8,5 +8,8 @@ public class OllamaOptions
     public required string Url { get; set; }
     
     [Required]
-    public required string Model { get; set; }
+    public required string InferenceModel { get; set; }
+    
+    [Required]
+    public required string EmbeddingModel  { get; set; }
 }

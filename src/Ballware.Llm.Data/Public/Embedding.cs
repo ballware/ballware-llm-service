@@ -5,4 +5,6 @@ namespace Ballware.Llm.Data.Public;
 public class Embedding: IEditable
 {
     public Guid Id { get; set; }
+    public Guid OriginId { get; set; }
+    public string? Model { get; set; }
 }

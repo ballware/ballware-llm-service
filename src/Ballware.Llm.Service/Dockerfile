@@ -21,7 +21,7 @@ COPY ./Ballware.Llm.Ingestion.Docling ./Ballware.Llm.Ingestion.Docling
 COPY ./Ballware.Llm.Jobs ./Ballware.Llm.Jobs
 COPY ./Ballware.Llm.Metadata ./Ballware.Llm.Metadata
 COPY ./Ballware.Llm.Ollama ./Ballware.Llm.Ollama
-COPY ./Ballware.Ml.Service ./Ballware.Ml.Service
+COPY ./Ballware.Llm.Service ./Ballware.Llm.Service
 
 WORKDIR "/src/Ballware.Llm.Service"
 RUN dotnet nuget add source "https://nuget.pkg.github.com/ballware/index.json" --name github --username "$GITHUB_USERNAME" --password "$GITHUB_PAT" --store-password-in-clear-text

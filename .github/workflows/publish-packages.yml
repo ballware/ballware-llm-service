@@ -48,6 +48,7 @@ jobs:
         run: |
           dotnet build ballware-llm-service.sln -p:Version=${{ env.GitVersion_SemVer }} --configuration Release   
       - name: Generate Swagger specification
+        if: false
         working-directory: src/Ballware.Llm.Service
         env:
           ASPNETCORE_ENVIRONMENT: Swagger
@@ -57,14 +58,17 @@ jobs:
             ./bin/Release/net10.0/Ballware.Llm.Service.dll \
             service
       - name: Generate service client code
+        if: false
         working-directory: src/Ballware.Llm.Service.Client
         run: |
           dotnet tool run nswag run nswag.json         
       - name: Pack NuGet packages
+        if: false
         run: |
           dotnet restore ballware-llm-service.sln
           dotnet pack ballware-llm-service.sln -p:Version=${{ env.GitVersion_SemVer }} --configuration Release --output ./nupkgs
       - name: Publish NuGet packages to GitHub Packages
+        if: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

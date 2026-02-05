@@ -1,5 +1,6 @@
 using Ballware.Llm.Api;
 using Ballware.Llm.Api.Endpoints;
+using Ballware.Llm.Context;
 using Ballware.Llm.Data.Ef;
 using Ballware.Llm.Data.Ef.Configuration;
 using Ballware.Llm.Data.Ef.Postgres;
@@ -272,6 +273,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         Services.AddScoped<ITenantableRepositoryHook<Data.Public.Origin, Data.Persistables.Origin>, OriginPayloadRepositoryHook>();
 
         Services.AddBallwareLlmApiDependencies();
+        Services.AddBallwareLlmContext();
         Services.AddBallwareOllamaModelBridge(ollamaOptions);
         Services.AddBallwareIngestionForDocling(doclingOptions);
         Services.AddBallwareEmbeddingChunker();
@@ -355,8 +357,11 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
 
         app.MapChatEndpoint("ai/hubs");
         app.MapOriginUserApi("/ai/origin");
+        
+        app.MapTenantableEditingApi<Data.Public.Context>("/ai/context", "ai", "context", "Context", "Context", "mlApi", "llm");
         app.MapTenantableEditingApi<Data.Public.Origin>("/ai/origin", "ai", "origin", "Origin", "Origin", "mlApi", "llm");
         app.MapTenantableEditingApi<Data.Public.Embedding>("/ai/embedding", "ai", "embedding", "Embedding", "Embedding", "mlApi", "llm");
+        app.MapTenantableEditingApi<Data.Public.Chunk>("/ai/chunk", "ai", "chunk", "Chunk", "Chunk", "mlApi", "llm");
         
         var authorizationOptions = app.Services.GetService<IOptions<AuthorizationOptions>>()?.Value;
         var swaggerOptions = app.Services.GetService<IOptions<SwaggerOptions>>()?.Value;

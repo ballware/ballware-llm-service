@@ -1,37 +1,61 @@
+using Ballware.Llm.Context;
+using Ballware.Llm.Metadata;
 using Ballware.Llm.Ollama;
+using Ballware.Shared.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Ballware.Llm.Api.Chat;
 
 [Authorize]
-public class ChatHub : Hub
+public class ChatHub(IServiceProvider serviceProvider, IPrincipalUtils principalUtils, ChatSessionStore sessionStore) : Hub
 {
-    private ChatSessionStore SessionStore { get; }
-    private IOllamaModelBridge ModelBridge { get; }
-    
-    public ChatHub(ChatSessionStore sessionStore, IOllamaModelBridge modelBridge)
+    public override async Task OnConnectedAsync()
     {
-        SessionStore = sessionStore;
-        ModelBridge = modelBridge;
-    }
-
-    public override Task OnConnectedAsync()
-    {
-        SessionStore.Add(new ChatSession(Context.ConnectionId, ModelBridge.StartChat()));
+        if (Context.User?.Identity == null || !Context.User.Identity.IsAuthenticated)
+        {
+            throw new UnauthorizedAccessException("User is not authenticated.");
+        }
         
-        return base.OnConnectedAsync();
+        var tenantId = principalUtils.GetUserTenandId(Context.User);
+        var userId = principalUtils.GetUserId(Context.User);
+        
+        sessionStore.Add(new ChatSession(Context.ConnectionId, "global", tenantId, userId));
+        
+        await base.OnConnectedAsync();
+        
+        var scope = serviceProvider.CreateScope();
+        var modelContextProvider = scope.ServiceProvider.GetRequiredService<IModelContextProvider>();
+        
+        var welcomeMessage = await modelContextProvider.ProvideWelcomeMessageAsync(tenantId, "global");
+        
+        if (!string.IsNullOrEmpty(welcomeMessage))
+        {
+            await Clients.Caller.SendAsync("Response", welcomeMessage);
+        }
     }
 
     public override Task OnDisconnectedAsync(Exception? exception)
     {
-        SessionStore.Drop(Context.ConnectionId);
+        sessionStore.Drop(Context.ConnectionId);
         
         return base.OnDisconnectedAsync(exception);
     }
 
     public async Task Prompt(string message)
     {
-        await SessionStore.Get(Context.ConnectionId).Chat.PromptAsync(message, (token) => Clients.Caller.SendAsync("Response", token));
+        var session = sessionStore.Get(Context.ConnectionId);
+
+        if (session.Chat == null)
+        {
+            var scope = serviceProvider.CreateScope();
+            var ollamaModelBridge = scope.ServiceProvider.GetRequiredService<IOllamaModelBridge>();
+            var modelContextProvider = scope.ServiceProvider.GetRequiredService<IModelContextProvider>();
+            
+            await session.StartChatAsync(ollamaModelBridge, modelContextProvider, message);
+        }
+        
+        await session.Chat.PromptAsync(message, (token) => Clients.Caller.SendAsync("Response", token));
     }
 }

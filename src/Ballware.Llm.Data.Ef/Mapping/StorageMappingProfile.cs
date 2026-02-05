@@ -7,6 +7,13 @@ class StorageMappingProfile : Profile
 {
     public StorageMappingProfile()
     {
+        CreateMap<Public.Context, Persistables.Context>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.Uuid, opt => opt.MapFrom(src => src.Id));
+        
+        CreateMap<Persistables.Context, Public.Context>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Uuid));
+        
         CreateMap<Public.Origin, Persistables.Origin>()
             .ForMember(dest => dest.Id, opt => opt.Ignore())
             .ForMember(dest => dest.Uuid, opt => opt.MapFrom(src => src.Id));

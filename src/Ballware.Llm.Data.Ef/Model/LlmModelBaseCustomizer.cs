@@ -5,8 +5,9 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Ballware.Llm.Data.Ef.Model;
 
-public class LlmModelBaseCustomizer<TOrigin, TEmbedding, TChunk> 
+public class LlmModelBaseCustomizer<TContext, TOrigin, TEmbedding, TChunk> 
     : RelationalModelCustomizer 
+    where TContext : Context
     where TOrigin : Origin 
     where TEmbedding : Embedding 
     where TChunk : Chunk
@@ -37,6 +38,11 @@ public class LlmModelBaseCustomizer<TOrigin, TEmbedding, TChunk>
                 }
             }
         }
+        
+        modelBuilder.Entity<TContext>().HasKey(d => d.Id);
+        modelBuilder.Entity<TContext>().HasIndex(d => new { d.TenantId, d.Uuid }).IsUnique();
+        modelBuilder.Entity<TContext>().HasIndex(d => d.TenantId);
+        modelBuilder.Entity<TContext>().HasIndex(d => new { d.TenantId, d.Identifier }).IsUnique();
         
         modelBuilder.Entity<TOrigin>().HasKey(d => d.Id);
         modelBuilder.Entity<TOrigin>().HasIndex(d => new { d.TenantId, d.Uuid }).IsUnique();

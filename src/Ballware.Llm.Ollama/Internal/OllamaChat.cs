@@ -1,22 +1,18 @@
+using System;
 using System.Text;
+using System.Threading.Tasks;
 using OllamaSharp;
 
 namespace Ballware.Llm.Ollama.Internal;
 
-internal class OllamaChat : IOllamaChat
+internal class OllamaChat(Chat chat) : IOllamaChat
 {
-    private Chat Chat { get; }
-    
-    public OllamaChat(Chat chat)
-    {
-        Chat = chat;
-    }
-    
     public async Task PromptAsync(string message, Action<string> tokenHandler)
     {
+        
         var sb = new StringBuilder();
         
-        await foreach (var response in Chat.SendAsync(message))
+        await foreach (var response in chat.SendAsync(message))
         {
             sb.Append(response);
         }

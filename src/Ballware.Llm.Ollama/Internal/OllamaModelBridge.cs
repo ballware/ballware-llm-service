@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Ballware.Llm.Ollama.Configuration;
 using OllamaSharp;
 using OllamaSharp.Models;
@@ -25,9 +26,12 @@ internal class OllamaModelBridge : IOllamaModelBridge
         };
     }
 
-    public IOllamaChat StartChat()
+    public IOllamaChat StartChat(string? systemPrompt = null)
     {
-        return new OllamaChat(new Chat(InferenceApiClient));
+        var chat = systemPrompt != null 
+            ? new Chat(InferenceApiClient, systemPrompt) 
+            : new Chat(InferenceApiClient);
+        return new OllamaChat(chat);
     }
 
     public async Task<float[]> EmbedAsync(string chunk, string? model)

@@ -81,6 +81,66 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
                     b.ToTable("chunk");
                 });
 
+            modelBuilder.Entity("Ballware.Llm.Data.Persistables.Context", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("CreateStamp")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("create_stamp");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("creator_id");
+
+                    b.Property<string>("Identifier")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("identifier");
+
+                    b.Property<DateTime?>("LastChangeStamp")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_change_stamp");
+
+                    b.Property<Guid?>("LastChangerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("last_changer_id");
+
+                    b.Property<string>("SystemPromptTemplate")
+                        .HasColumnType("text")
+                        .HasColumnName("system_prompt_template");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("Uuid")
+                        .HasColumnType("uuid")
+                        .HasColumnName("uuid");
+
+                    b.Property<string>("WelcomeMessage")
+                        .HasColumnType("text")
+                        .HasColumnName("welcome_message");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "Identifier")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "Uuid")
+                        .IsUnique();
+
+                    b.ToTable("context");
+                });
+
             modelBuilder.Entity("Ballware.Llm.Data.Persistables.Embedding", b =>
                 {
                     b.Property<long>("Id")

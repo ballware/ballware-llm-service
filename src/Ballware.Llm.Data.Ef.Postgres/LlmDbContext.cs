@@ -12,6 +12,7 @@ public class LlmDbContext : DbContext, ILlmDbContext
         modelBuilder.HasPostgresExtension("vector");
     }
     
+    public DbSet<Context> Contexts { get; set; }
     public DbSet<Origin>  Origins { get; set; }
     public DbSet<Embedding>  Embeddings { get; set; }
     public DbSet<Chunk>  Chunks { get; set; }

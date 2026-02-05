@@ -2,6 +2,7 @@ using Ballware.Shared.Data.Repository;
 using Ballware.Llm.Data.Ef.Configuration;
 using Ballware.Llm.Data.Ef.Model;
 using Ballware.Llm.Data.Ef.Postgres.Internal;
+using Ballware.Llm.Data.Ef.Postgres.Repository;
 using Ballware.Llm.Data.Ef.Repository;
 using Ballware.Llm.Data.Persistables;
 using Ballware.Llm.Data.Repository;
@@ -24,10 +25,13 @@ public static class ServiceCollectionExtensions
                 o.MigrationsAssembly(typeof(LlmDbContext).Assembly.FullName);
             });
 
-            o.ReplaceService<IModelCustomizer, LlmModelBaseCustomizer<Origin, Embedding, Chunk>>();
+            o.ReplaceService<IModelCustomizer, LlmModelBaseCustomizer<Context, Origin, Embedding, Chunk>>();
         });
 
         services.AddScoped<ILlmDbContext, LlmDbContext>();
+        
+        services.AddScoped<ITenantableRepository<Public.Context>, ContextBaseRepository>();
+        services.AddScoped<IContextRepository, ContextBaseRepository>();
         
         services.AddScoped<ITenantableRepository<Public.Origin>, OriginBaseRepository>();
         services.AddScoped<IOriginRepository, OriginBaseRepository>();
@@ -35,8 +39,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITenantableRepository<Public.Embedding>, EmbeddingBaseRepository>();
         services.AddScoped<IEmbeddingRepository, EmbeddingBaseRepository>();
         
-        services.AddScoped<ITenantableRepository<Public.Chunk>, ChunkBaseRepository>();
-        services.AddScoped<IChunkRepository, ChunkBaseRepository>();
+        services.AddScoped<ITenantableRepository<Public.Chunk>, ChunkRepository>();
+        services.AddScoped<IChunkRepository, ChunkRepository>();
         
         services.AddHostedService<InitializationWorker>();
         

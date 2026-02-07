@@ -175,9 +175,9 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
             {
                 options.AddDefaultPolicy(c =>
                 {
-                    c.WithOrigins(corsOptions.AllowedOrigins)
-                        .WithMethods(corsOptions.AllowedMethods)
-                        .WithHeaders(corsOptions.AllowedHeaders)
+                    c.WithOrigins(corsOptions.AllowedOrigins.Split(','))
+                        .WithMethods(corsOptions.AllowedMethods.Split(','))
+                        .WithHeaders(corsOptions.AllowedHeaders.Split(','))
                         .AllowCredentials();
                 });
             });

@@ -62,6 +62,7 @@ public static class OriginEndpoint
         jobData.Add("ownerEntity", body.OwnerEntity);
         jobData.Add("ownerId", body.OwnerId);
         jobData.Add("attachmentId", body.AttachmentId);
+        jobData.Add("name", body.Name);
 
         await (await schedulerFactory.GetScheduler()).TriggerJob(JobKey.Create("addfromattachment", "origin"), jobData);
         

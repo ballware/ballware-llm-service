@@ -17,10 +17,16 @@ public class OriginAddFromAttachmentJob(IJobFileStorageAdapter storageAdapter, I
         var ownerEntity = context.MergedJobDataMap.GetString("ownerEntity");
         var ownerId = context.MergedJobDataMap.GetGuidValue("ownerId");
         var attachmentId = context.MergedJobDataMap.GetGuidValue("attachmentId");
+        var name = context.MergedJobDataMap.GetString("name");
 
         if (ownerEntity == null)
         {
             throw new ArgumentNullException(nameof(ownerEntity));
+        }
+
+        if (string.IsNullOrEmpty(name))
+        {
+            throw new ArgumentNullException(nameof(name));
         }
 
         var attachmentResponse = await storageAdapter.AttachmentPayloadByIdForOwnerAsync(tenantId, ownerEntity, ownerId, attachmentId);
@@ -39,8 +45,8 @@ public class OriginAddFromAttachmentJob(IJobFileStorageAdapter storageAdapter, I
             ReferingId = ownerId,
             OwnerEntity = "attachment",
             OwnerId = attachmentId,
-            Name = "Dummy",
-            Description = "Empty",
+            Name = name,
+            Description = "None",
             ContentType = ingestionResult.Format,
             Content = ingestionResult.Payload,
         };

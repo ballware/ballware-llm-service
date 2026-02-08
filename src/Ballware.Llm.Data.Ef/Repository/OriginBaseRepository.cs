@@ -15,7 +15,7 @@ public class OriginBaseRepository(IMapper mapper, ILlmDbContext dbContext, IEmbe
         
         var embeddings = (await embeddingRepository.QueryAsync(tenantId, "origin", claims, new Dictionary<string, object>
         {
-            { "Origin", persistable.Uuid }
+            { "origin", persistable.Uuid }
         })).ToList();
 
         foreach (var embedding in embeddings)

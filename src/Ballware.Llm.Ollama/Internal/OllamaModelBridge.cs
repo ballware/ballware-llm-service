@@ -26,11 +26,20 @@ internal class OllamaModelBridge : IOllamaModelBridge
         };
     }
 
-    public IOllamaChat StartChat(string? systemPrompt = null)
+    public IOllamaChat StartChat(OllamaChatOptions options)
     {
-        var chat = systemPrompt != null 
-            ? new Chat(InferenceApiClient, systemPrompt) 
+        var requestOptions = new RequestOptions
+        {
+            NumCtx = options.NumCtx ?? 8192
+        };
+        
+        var chat = options.SystemPrompt != null 
+            ? new Chat(InferenceApiClient, options.SystemPrompt) 
             : new Chat(InferenceApiClient);
+        
+        chat.Model = options.Model ?? Options.InferenceModel;
+        chat.Options = requestOptions;
+        
         return new OllamaChat(chat);
     }
 

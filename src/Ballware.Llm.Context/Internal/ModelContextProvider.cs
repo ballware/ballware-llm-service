@@ -60,4 +60,20 @@ internal class ModelContextProvider(IOllamaModelBridge modelBridge, IContextRepo
 
         return string.Empty;
     }
+
+    public async Task<ModelContextOptions> ProvideOptionsAsync(Guid tenantId, string contextIdentifier)
+    {
+        var context = await contextRepository.GetByIdentifierAsync(tenantId, contextIdentifier);
+
+        if (context != null)
+        {
+            return new ModelContextOptions()
+            {
+                Model = context.Model,
+                NumCtx = context.NumCtx
+            };
+        }
+
+        return new ModelContextOptions();
+    }
 }

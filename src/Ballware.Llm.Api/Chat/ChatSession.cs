@@ -11,8 +11,14 @@ public class ChatSession(string connectionId, string contextIdentifier, Guid ten
     
     public async Task StartChatAsync(IOllamaModelBridge modelBridge, IModelContextProvider modelContextProvider, string initialPrompt)
     {
+        var options = await modelContextProvider.ProvideOptionsAsync(tenantId, contextIdentifier);
         var systemPrompt = await modelContextProvider.ProvideSystemPromptAsync(tenantId, contextIdentifier, initialPrompt);
         
-        Chat = modelBridge.StartChat(systemPrompt);
+        Chat = modelBridge.StartChat(new OllamaChatOptions()
+        {
+            Model = options.Model,
+            NumCtx = options.NumCtx,
+            SystemPrompt = systemPrompt
+        });
     }
 }

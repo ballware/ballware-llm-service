@@ -112,6 +112,15 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("last_changer_id");
 
+                    b.Property<string>("Model")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("model");
+
+                    b.Property<int?>("NumCtx")
+                        .HasColumnType("integer")
+                        .HasColumnName("num_ctx");
+
                     b.Property<string>("SystemPromptTemplate")
                         .HasColumnType("text")
                         .HasColumnName("system_prompt_template");

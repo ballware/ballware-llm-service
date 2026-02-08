@@ -42,7 +42,7 @@ public class DoclingStatusResponse
     [JsonProperty(PropertyName = "task_id")]
     public required string TaskId { get; set; }
 
-    [JsonProperty(PropertyName = "status")]
+    [JsonProperty(PropertyName = "task_status")]
     public required string Status { get; set; }
 }
 

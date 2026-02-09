@@ -192,6 +192,10 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
 
+                    b.Property<int?>("TopK")
+                        .HasColumnType("integer")
+                        .HasColumnName("top_k");
+
                     b.Property<Guid>("Uuid")
                         .HasColumnType("uuid")
                         .HasColumnName("uuid");
@@ -237,6 +241,10 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
                     b.Property<bool>("GlobalContext")
                         .HasColumnType("boolean")
                         .HasColumnName("global_context");
+
+                    b.Property<int?>("GlobalRelevance")
+                        .HasColumnType("integer")
+                        .HasColumnName("global_relevance");
 
                     b.Property<DateTime?>("LastChangeStamp")
                         .HasColumnType("timestamp with time zone")

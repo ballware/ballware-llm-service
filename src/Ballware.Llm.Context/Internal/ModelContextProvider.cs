@@ -1,10 +1,11 @@
+using Ballware.Llm.Context.Configuration;
 using Ballware.Llm.Data.Repository;
 using Ballware.Llm.Ollama;
 using SmartFormat;
 
 namespace Ballware.Llm.Context.Internal;
 
-internal class ModelContextProvider(IOllamaModelBridge modelBridge, IContextRepository contextRepository, IOriginRepository originRepository, IEmbeddingRepository embeddingRepository, IChunkRepository chunkRepository) : IModelContextProvider
+internal class ModelContextProvider(ContextOptions options, IOllamaModelBridge modelBridge, IContextRepository contextRepository, IOriginRepository originRepository, IEmbeddingRepository embeddingRepository, IChunkRepository chunkRepository) : IModelContextProvider
 {
     public async Task<string> ProvideWelcomeMessageAsync(Guid tenantId, string contextIdentifier)
     {
@@ -23,7 +24,7 @@ internal class ModelContextProvider(IOllamaModelBridge modelBridge, IContextRepo
             
             var globalOrigins = await originRepository.GetGlobalOriginsAsync(tenantId);
 
-            foreach (var origin in globalOrigins)
+            foreach (var origin in globalOrigins.OrderBy(o => (o.GlobalRelevance ?? 0)))
             {
                 var activeEmbeddings =
                     (await embeddingRepository.GetActiveEmbeddingsForOrigin(tenantId, origin.Id)).ToList();
@@ -37,7 +38,7 @@ internal class ModelContextProvider(IOllamaModelBridge modelBridge, IContextRepo
                     {
                         var initialPromptVector = await modelBridge.EmbedAsync(initialPrompt, embedding.Model);
                         
-                        var topChunks = await chunkRepository.FetchTopKSimilarChunksAsync(tenantId, embedding.Id, initialPromptVector, 8);
+                        var topChunks = await chunkRepository.FetchTopKSimilarChunksAsync(tenantId, embedding.Id, initialPromptVector, embedding.TopK ?? options.DefaultTopK);
 
                         foreach (var chunk in topChunks)
                         {
@@ -59,6 +60,11 @@ internal class ModelContextProvider(IOllamaModelBridge modelBridge, IContextRepo
         }
 
         return string.Empty;
+    }
+
+    public Task<long> EstimateTokenCountAsync(Guid tenantId, string contextIdentifier, string systemPrompt)
+    {
+        return Task.FromResult(systemPrompt.Length / 4L);
     }
 
     public async Task<ModelContextOptions> ProvideOptionsAsync(Guid tenantId, string contextIdentifier)

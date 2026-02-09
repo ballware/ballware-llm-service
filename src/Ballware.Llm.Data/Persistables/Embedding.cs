@@ -27,6 +27,9 @@ public class Embedding : IEntity, ITenantable, IAuditable
     [Column("active")]
     public virtual bool Active { get; set; }
     
+    [Column("top_k")]
+    public int? TopK { get; set;  }
+    
     [Column("creator_id")]
     public virtual Guid? CreatorId { get; set; }
 

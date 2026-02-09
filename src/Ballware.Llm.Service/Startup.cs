@@ -1,6 +1,7 @@
 using Ballware.Llm.Api;
 using Ballware.Llm.Api.Endpoints;
 using Ballware.Llm.Context;
+using Ballware.Llm.Context.Configuration;
 using Ballware.Llm.Data.Ef;
 using Ballware.Llm.Data.Ef.Configuration;
 using Ballware.Llm.Data.Ef.Postgres;
@@ -55,6 +56,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
             Configuration.GetSection("Authorization").Get<AuthorizationOptions>();
         SwaggerOptions? swaggerOptions = Configuration.GetSection("Swagger").Get<SwaggerOptions>();
         LlmStorageOptions? llmStorageOptions = Configuration.GetSection("Llm").Get<LlmStorageOptions>();
+        ContextOptions? contextOptions = Configuration.GetSection("Context").Get<ContextOptions>();
         OllamaOptions? ollamaOptions = Configuration.GetSection("Ollama").Get<OllamaOptions>();
         DoclingOptions? doclingOptions = Configuration.GetSection("Docling").Get<DoclingOptions>();
         ServiceClientOptions? storageClientOptions = Configuration.GetSection("StorageClient").Get<ServiceClientOptions>();
@@ -72,6 +74,10 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         
         Services.AddOptionsWithValidateOnStart<LlmStorageOptions>()
             .Bind(Configuration.GetSection("Llm"))
+            .ValidateDataAnnotations();
+        
+        Services.AddOptionsWithValidateOnStart<ContextOptions>()
+            .Bind(Configuration.GetSection("Context"))
             .ValidateDataAnnotations();
         
         Services.AddOptionsWithValidateOnStart<OllamaOptions>()
@@ -94,6 +100,11 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         if (llmStorageOptions == null || string.IsNullOrEmpty(llmStorageConnectionString))
         {
             throw new ConfigurationException("Required configuration for llm storage is missing");
+        }
+        
+        if (contextOptions == null)
+        {
+            contextOptions = new ContextOptions();
         }
         
         if (ollamaOptions == null)
@@ -273,7 +284,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         Services.AddScoped<ITenantableRepositoryHook<Data.Public.Origin, Data.Persistables.Origin>, OriginPayloadRepositoryHook>();
 
         Services.AddBallwareLlmApiDependencies();
-        Services.AddBallwareLlmContext();
+        Services.AddBallwareLlmContext(contextOptions);
         Services.AddBallwareOllamaModelBridge(ollamaOptions);
         Services.AddBallwareIngestionForDocling(doclingOptions);
         Services.AddBallwareEmbeddingChunker();
@@ -356,6 +367,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         app.UseAuthorization();
 
         app.MapChatEndpoint("ai/hubs");
+        app.MapContextUserApi("/ai/context");
         app.MapOriginUserApi("/ai/origin");
         
         app.MapTenantableEditingApi<Data.Public.Context>("/ai/context", "ai", "context", "Context", "Context", "mlApi", "llm");

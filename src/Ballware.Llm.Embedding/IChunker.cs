@@ -8,10 +8,9 @@ public sealed record Chunk(
 );
 
 public sealed record ChunkRequest(
-    Guid originId,
-    string ContentType,
-    int MaxTokensPerChunk = 750,
-    int OverlapTokens = 120
+    Guid OriginId,
+    int? MaxTokensPerChunk,
+    int? OverlapTokens
 );
 
 

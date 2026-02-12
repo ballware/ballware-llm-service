@@ -88,6 +88,16 @@ public static class OriginEndpoint
             jobData.Add("id", id);
             jobData.Add("model", body.Model);
             jobData.Add("activate", body.Activate);
+            
+            if (body.TokensPerChunk.HasValue)
+            {
+                jobData.Add("tokensPerChunk", body.TokensPerChunk.Value);
+            }
+            
+            if (body.OverlapTokens.HasValue)
+            {
+                jobData.Add("overlapTokens", body.OverlapTokens.Value);
+            }
 
             await (await schedulerFactory.GetScheduler()).TriggerJob(JobKey.Create("createembedding", "origin"), jobData);
         }

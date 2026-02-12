@@ -20,6 +20,19 @@ public class OriginCreateEmbeddingJob(IServiceProvider serviceProvider, IOriginR
         var originId = context.MergedJobDataMap.GetGuidValue("id");
         var model = context.MergedJobDataMap.GetString("model");
         var activate =  context.MergedJobDataMap.GetBooleanValue("activate");
+        
+        int? maxTokensPerChunk = null;
+        int? overlapTokens = null;
+
+        if (context.MergedJobDataMap.TryGetIntValue("tokensPerChunk", out var maxTokensPerChunkInt))
+        {
+            maxTokensPerChunk = maxTokensPerChunkInt;
+        }
+
+        if (context.MergedJobDataMap.TryGetIntValue("overlapTokens", out var overlapTokensInt))
+        {
+            overlapTokens = overlapTokensInt;
+        }
 
         if (model == null)
         {
@@ -42,7 +55,7 @@ public class OriginCreateEmbeddingJob(IServiceProvider serviceProvider, IOriginR
 
         var chunker = (IChunker<string>)serviceProvider.GetRequiredService(chunkerType);
 
-        var chunks = chunker.Chunk(origin.Content, new ChunkRequest(origin.Id, origin.ContentType));
+        var chunks = chunker.Chunk(origin.Content, new ChunkRequest(origin.Id, maxTokensPerChunk, overlapTokens));
 
         var embedding = new Data.Public.Embedding()
         {

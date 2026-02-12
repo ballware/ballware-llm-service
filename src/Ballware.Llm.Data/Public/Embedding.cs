@@ -9,4 +9,6 @@ public class Embedding: IEditable
     public string? Model { get; set; }
     public bool Active { get; set; }
     public int? TopK { get; set; }
+    public int? MaxTokensPerChunk { get; set; }
+    public int? OverlapTokens { get; set; }
 }

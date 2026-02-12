@@ -179,6 +179,10 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("last_changer_id");
 
+                    b.Property<int?>("MaxTokensPerChunk")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_tokens_per_chunk");
+
                     b.Property<string>("Model")
                         .IsRequired()
                         .HasColumnType("text")
@@ -187,6 +191,10 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
                     b.Property<Guid>("OriginId")
                         .HasColumnType("uuid")
                         .HasColumnName("origin_id");
+
+                    b.Property<int?>("OverlapTokens")
+                        .HasColumnType("integer")
+                        .HasColumnName("overlap_tokens");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")

@@ -30,6 +30,12 @@ public class Embedding : IEntity, ITenantable, IAuditable
     [Column("top_k")]
     public int? TopK { get; set;  }
     
+    [Column("max_tokens_per_chunk")]
+    public int? MaxTokensPerChunk { get; set; }
+    
+    [Column("overlap_tokens")]
+    public int? OverlapTokens { get; set; }
+    
     [Column("creator_id")]
     public virtual Guid? CreatorId { get; set; }
 

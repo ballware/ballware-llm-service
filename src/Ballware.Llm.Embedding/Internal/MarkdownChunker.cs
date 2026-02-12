@@ -1,22 +1,23 @@
 using System.Diagnostics.CodeAnalysis;
+using Ballware.Llm.Embedding.Configuration;
 using Microsoft.SemanticKernel.Text;
 using Newtonsoft.Json.Linq;
 
 namespace Ballware.Llm.Embedding.Internal;
 
-internal sealed class MarkdownChunker : IChunker<string>
+internal sealed class MarkdownChunker(EmbeddingOptions options) : IChunker<string>
 {
     [Experimental("SKEXP0050")]
     public IReadOnlyList<Chunk> Chunk(string markdown, ChunkRequest request)
     {
         var lines = TextChunker.SplitMarkDownLines(
             markdown,
-            maxTokensPerLine: request.MaxTokensPerChunk);
+            maxTokensPerLine: request.MaxTokensPerChunk ?? options.DefaultMaxTokensPerChunk);
 
         var parts = TextChunker.SplitMarkdownParagraphs(
             lines,
-            maxTokensPerParagraph: request.MaxTokensPerChunk,
-            overlapTokens: request.OverlapTokens);
+            maxTokensPerParagraph: request.MaxTokensPerChunk ?? options.DefaultMaxTokensPerChunk,
+            overlapTokens: request.OverlapTokens ?? options.DefaultOverlapTokens);
 
         var chunks = new List<Chunk>(parts.Count);
 
@@ -29,7 +30,7 @@ internal sealed class MarkdownChunker : IChunker<string>
             {
                 ["sourceType"] = "markdown",
                 ["chunkIndex"] = i,
-                ["originId"] = request.originId
+                ["originId"] = request.OriginId
             };
 
             chunks.Add(new Chunk(text, meta));

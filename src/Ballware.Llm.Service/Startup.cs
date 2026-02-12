@@ -6,6 +6,7 @@ using Ballware.Llm.Data.Ef;
 using Ballware.Llm.Data.Ef.Configuration;
 using Ballware.Llm.Data.Ef.Postgres;
 using Ballware.Llm.Embedding;
+using Ballware.Llm.Embedding.Configuration;
 using Ballware.Llm.Ingestion.Docling;
 using Ballware.Llm.Ingestion.Docling.Configuration;
 using Ballware.Llm.Jobs;
@@ -57,6 +58,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         SwaggerOptions? swaggerOptions = Configuration.GetSection("Swagger").Get<SwaggerOptions>();
         LlmStorageOptions? llmStorageOptions = Configuration.GetSection("Llm").Get<LlmStorageOptions>();
         ContextOptions? contextOptions = Configuration.GetSection("Context").Get<ContextOptions>();
+        EmbeddingOptions? embeddingOptions = Configuration.GetSection("Embedding").Get<EmbeddingOptions>();
         OllamaOptions? ollamaOptions = Configuration.GetSection("Ollama").Get<OllamaOptions>();
         DoclingOptions? doclingOptions = Configuration.GetSection("Docling").Get<DoclingOptions>();
         ServiceClientOptions? storageClientOptions = Configuration.GetSection("StorageClient").Get<ServiceClientOptions>();
@@ -78,6 +80,10 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         
         Services.AddOptionsWithValidateOnStart<ContextOptions>()
             .Bind(Configuration.GetSection("Context"))
+            .ValidateDataAnnotations();
+        
+        Services.AddOptionsWithValidateOnStart<EmbeddingOptions>()
+            .Bind(Configuration.GetSection("Embedding"))
             .ValidateDataAnnotations();
         
         Services.AddOptionsWithValidateOnStart<OllamaOptions>()
@@ -105,6 +111,11 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         if (contextOptions == null)
         {
             contextOptions = new ContextOptions();
+        }
+
+        if (embeddingOptions == null)
+        {
+            embeddingOptions = new EmbeddingOptions();
         }
         
         if (ollamaOptions == null)
@@ -287,7 +298,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         Services.AddBallwareLlmContext(contextOptions);
         Services.AddBallwareOllamaModelBridge(ollamaOptions);
         Services.AddBallwareIngestionForDocling(doclingOptions);
-        Services.AddBallwareEmbeddingChunker();
+        Services.AddBallwareEmbeddingChunker(embeddingOptions);
         
         Services.AddEndpointsApiExplorer();
         
@@ -369,6 +380,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         app.MapChatEndpoint("ai/hubs");
         app.MapContextUserApi("/ai/context");
         app.MapOriginUserApi("/ai/origin");
+        app.MapEmbeddingUserApi("/ai/embedding");
         
         app.MapTenantableEditingApi<Data.Public.Context>("/ai/context", "ai", "context", "Context", "Context", "mlApi", "llm");
         app.MapTenantableEditingApi<Data.Public.Origin>("/ai/origin", "ai", "origin", "Origin", "Origin", "mlApi", "llm");

@@ -8,7 +8,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Ballware.Llm.Data\Ballware.Llm.Data.csproj" />
-      <ProjectReference Include="..\Ballware.Llm.Ollama\Ballware.Llm.Ollama.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Engine.Ollama\Ballware.Llm.Engine.Ollama.csproj" />
     </ItemGroup>
 
     <ItemGroup>

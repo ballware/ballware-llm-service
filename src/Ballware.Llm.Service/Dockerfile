@@ -16,11 +16,13 @@ COPY ./Ballware.Llm.Data ./Ballware.Llm.Data
 COPY ./Ballware.Llm.Data.Ef ./Ballware.Llm.Data.Ef
 COPY ./Ballware.Llm.Data.Ef.Postgres ./Ballware.Llm.Data.Ef.Postgres
 COPY ./Ballware.Llm.Embedding ./Ballware.Llm.Embedding
+COPY ./Ballware.Llm.Engine ./Ballware.Llm.Engine
+COPY ./Ballware.Llm.Engine.Commons ./Ballware.Llm.Engine.Commons
+COPY ./Ballware.Llm.Engine.Ollama ./Ballware.Llm.Engine.Ollama
 COPY ./Ballware.Llm.Ingestion ./Ballware.Llm.Ingestion
 COPY ./Ballware.Llm.Ingestion.Docling ./Ballware.Llm.Ingestion.Docling
 COPY ./Ballware.Llm.Jobs ./Ballware.Llm.Jobs
 COPY ./Ballware.Llm.Metadata ./Ballware.Llm.Metadata
-COPY ./Ballware.Llm.Ollama ./Ballware.Llm.Ollama
 COPY ./Ballware.Llm.Service ./Ballware.Llm.Service
 
 WORKDIR "/src/Ballware.Llm.Service"

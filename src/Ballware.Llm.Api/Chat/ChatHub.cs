@@ -1,6 +1,6 @@
 using Ballware.Llm.Context;
 using Ballware.Llm.Metadata;
-using Ballware.Llm.Ollama;
+using Ballware.Llm.Engine.Ollama;
 using Ballware.Shared.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -20,8 +20,9 @@ public class ChatHub(IServiceProvider serviceProvider, IPrincipalUtils principal
         
         var tenantId = principalUtils.GetUserTenandId(Context.User);
         var userId = principalUtils.GetUserId(Context.User);
+        var userClaims = principalUtils.GetUserClaims(Context.User);
         
-        sessionStore.Add(new ChatSession(Context.ConnectionId, "global", tenantId, userId));
+        sessionStore.Add(new ChatSession(Context.ConnectionId, "global", tenantId, userId, userClaims));
         
         await base.OnConnectedAsync();
         

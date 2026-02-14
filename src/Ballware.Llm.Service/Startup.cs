@@ -7,11 +7,12 @@ using Ballware.Llm.Data.Ef.Configuration;
 using Ballware.Llm.Data.Ef.Postgres;
 using Ballware.Llm.Embedding;
 using Ballware.Llm.Embedding.Configuration;
+using Ballware.Llm.Engine.Commons;
 using Ballware.Llm.Ingestion.Docling;
 using Ballware.Llm.Ingestion.Docling.Configuration;
 using Ballware.Llm.Jobs;
-using Ballware.Llm.Ollama;
-using Ballware.Llm.Ollama.Configuration;
+using Ballware.Llm.Engine.Ollama;
+using Ballware.Llm.Engine.Ollama.Configuration;
 using Ballware.Llm.Service.Adapter;
 using Ballware.Llm.Service.Configuration;
 using Ballware.Llm.Service.Extensions;
@@ -296,7 +297,11 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
 
         Services.AddBallwareLlmApiDependencies();
         Services.AddBallwareLlmContext(contextOptions);
-        Services.AddBallwareOllamaModelBridge(ollamaOptions);
+        Services.AddBallwareLlmEngineCommons();
+        Services.AddBallwareOllamaEngine(ollamaOptions, (serviceProvider, toolRegistry) =>
+        {
+            toolRegistry.RegisterBallwareLlmCommonTools(serviceProvider);
+        });
         Services.AddBallwareIngestionForDocling(doclingOptions);
         Services.AddBallwareEmbeddingChunker(embeddingOptions);
         

@@ -3,7 +3,7 @@ using Ballware.Llm.Data.Public;
 using Ballware.Llm.Data.Repository;
 using Ballware.Llm.Embedding;
 using Ballware.Llm.Ingestion;
-using Ballware.Llm.Ollama;
+using Ballware.Llm.Engine.Ollama;
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
 

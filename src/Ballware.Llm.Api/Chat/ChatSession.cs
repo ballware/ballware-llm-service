@@ -1,9 +1,9 @@
 using Ballware.Llm.Context;
-using Ballware.Llm.Ollama;
+using Ballware.Llm.Engine.Ollama;
 
 namespace Ballware.Llm.Api.Chat;
 
-public class ChatSession(string connectionId, string contextIdentifier, Guid tenantId, Guid userId)
+public class ChatSession(string connectionId, string contextIdentifier, Guid tenantId, Guid userId, IDictionary<string, object> claims)
 {
     public string ConnectionId { get; } = connectionId;
     
@@ -19,6 +19,6 @@ public class ChatSession(string connectionId, string contextIdentifier, Guid ten
             Model = options.Model,
             NumCtx = options.NumCtx,
             SystemPrompt = systemPrompt
-        });
+        }, tenantId, userId, claims);
     }
 }

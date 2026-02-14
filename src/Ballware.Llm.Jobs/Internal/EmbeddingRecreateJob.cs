@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 using Ballware.Llm.Data.Repository;
 using Ballware.Llm.Embedding;
 using Ballware.Llm.Embedding.Configuration;
-using Ballware.Llm.Ollama;
+using Ballware.Llm.Engine.Ollama;
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
 

@@ -1,4 +1,4 @@
-namespace Ballware.Llm.Ollama;
+namespace Ballware.Llm.Engine.Ollama;
 
 public interface IOllamaChat
 {

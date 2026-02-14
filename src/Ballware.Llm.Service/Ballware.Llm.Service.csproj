@@ -55,9 +55,10 @@
       <ProjectReference Include="..\Ballware.Llm.Data.Ef\Ballware.Llm.Data.Ef.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Data\Ballware.Llm.Data.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Embedding\Ballware.Llm.Embedding.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Engine.Commons\Ballware.Llm.Engine.Commons.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Ingestion.Docling\Ballware.Llm.Ingestion.Docling.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Jobs\Ballware.Llm.Jobs.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Metadata\Ballware.Llm.Metadata.csproj" />
-      <ProjectReference Include="..\Ballware.Llm.Ollama\Ballware.Llm.Ollama.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Engine.Ollama\Ballware.Llm.Engine.Ollama.csproj" />
     </ItemGroup>
 </Project>

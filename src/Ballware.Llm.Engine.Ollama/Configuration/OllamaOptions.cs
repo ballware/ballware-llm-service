@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
+using Ballware.Llm.Engine.Agent;
 
-namespace Ballware.Llm.Ollama.Configuration;
+namespace Ballware.Llm.Engine.Ollama.Configuration;
 
 public class OllamaOptions
 {

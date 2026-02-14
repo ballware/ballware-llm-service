@@ -1,6 +1,6 @@
 using Ballware.Llm.Context.Configuration;
 using Ballware.Llm.Data.Repository;
-using Ballware.Llm.Ollama;
+using Ballware.Llm.Engine.Ollama;
 using SmartFormat;
 
 namespace Ballware.Llm.Context.Internal;

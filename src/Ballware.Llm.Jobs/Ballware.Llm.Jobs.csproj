@@ -20,6 +20,6 @@
         <ProjectReference Include="..\Ballware.Llm.Embedding\Ballware.Llm.Embedding.csproj" />
         <ProjectReference Include="..\Ballware.Llm.Ingestion\Ballware.Llm.Ingestion.csproj" />
         <ProjectReference Include="..\Ballware.Llm.Metadata\Ballware.Llm.Metadata.csproj" />
-        <ProjectReference Include="..\Ballware.Llm.Ollama\Ballware.Llm.Ollama.csproj" />
+        <ProjectReference Include="..\Ballware.Llm.Engine.Ollama\Ballware.Llm.Engine.Ollama.csproj" />
     </ItemGroup>
 </Project>

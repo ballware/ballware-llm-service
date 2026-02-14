@@ -1,16 +1,15 @@
-using AutoMapper;
 using Ballware.Llm.Metadata;
+using Mapster;
 
 namespace Ballware.Llm.Service.Mappings;
 
-public class MetaServiceLlmMetadataProfile : Profile
+public class MetaServiceLlmMetadataProfile : IRegister
 {
-    public MetaServiceLlmMetadataProfile()
+    public void Register(TypeAdapterConfig config)
     {
-        CreateMap<Ballware.Meta.Service.Client.ServiceEntity, EntityMetadata>()
-            .ForMember(dst => dst.RightsCheckScript, 
-                opt => opt.MapFrom(source => source.CustomScripts.ExtendedRightsCheck));
-        
-        CreateMap<Ballware.Meta.Service.Client.ServiceTenant, Tenant>();
+        config.NewConfig<Ballware.Meta.Service.Client.ServiceEntity, EntityMetadata>()
+            .Map(dest => dest.RightsCheckScript, src => src.CustomScripts.ExtendedRightsCheck);
+
+        config.NewConfig<Ballware.Meta.Service.Client.ServiceTenant, Tenant>();
     }
 }

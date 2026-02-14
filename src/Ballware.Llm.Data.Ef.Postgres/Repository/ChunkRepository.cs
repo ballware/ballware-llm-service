@@ -1,7 +1,7 @@
-using AutoMapper;
 using Ballware.Llm.Data.Ef.Repository;
 using Ballware.Llm.Data.Repository;
 using Ballware.Shared.Data.Repository;
+using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
 using Pgvector;
 using Pgvector.EntityFrameworkCore;

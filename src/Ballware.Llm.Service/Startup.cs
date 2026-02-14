@@ -25,6 +25,8 @@ using Ballware.Shared.Authorization;
 using Ballware.Shared.Authorization.Jint;
 using Ballware.Shared.Data.Repository;
 using Duende.AccessTokenManagement;
+using Mapster;
+using MapsterMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
@@ -258,13 +260,15 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
                 ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
             })
 #endif                  
-            .AddClientCredentialsTokenHandler(ClientCredentialsClientName.Parse("meta"));        
+            .AddClientCredentialsTokenHandler(ClientCredentialsClientName.Parse("meta"));
+
+        var mapsterConfig = new TypeAdapterConfig()
+            .AddBallwareLlmStorageMappings();
         
-        Services.AddAutoMapper(config =>
-        {
-            config.AddBallwareLlmStorageMappings();
-            config.AddProfile<MetaServiceLlmMetadataProfile>();
-        });
+        new MetaServiceLlmMetadataProfile().Register(mapsterConfig);
+
+        Services.AddSingleton(mapsterConfig);
+        Services.AddScoped<IMapper, ServiceMapper>();
         
         Services.AddHttpContextAccessor();
 

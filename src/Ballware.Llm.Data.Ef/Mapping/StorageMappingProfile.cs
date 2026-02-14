@@ -1,40 +1,41 @@
-using AutoMapper;
+using System;
+using Mapster;
 using Pgvector;
 
 namespace Ballware.Llm.Data.Ef.Mapping;
 
-class StorageMappingProfile : Profile
+class StorageMappingProfile : IRegister
 {
-    public StorageMappingProfile()
+    public void Register(TypeAdapterConfig config)
     {
-        CreateMap<Public.Context, Persistables.Context>()
-            .ForMember(dest => dest.Id, opt => opt.Ignore())
-            .ForMember(dest => dest.Uuid, opt => opt.MapFrom(src => src.Id));
+        config.NewConfig<Public.Context, Persistables.Context>()
+            .Ignore(dest => dest.Id!)
+            .Map(dest => dest.Uuid, src => src.Id);
         
-        CreateMap<Persistables.Context, Public.Context>()
-            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Uuid));
+        config.NewConfig<Persistables.Context, Public.Context>()
+            .Map(dest => dest.Id, src => src.Uuid);
         
-        CreateMap<Public.Origin, Persistables.Origin>()
-            .ForMember(dest => dest.Id, opt => opt.Ignore())
-            .ForMember(dest => dest.Uuid, opt => opt.MapFrom(src => src.Id));
+        config.NewConfig<Public.Origin, Persistables.Origin>()
+            .Ignore(dest => dest.Id!)
+            .Map(dest => dest.Uuid, src => src.Id);
         
-        CreateMap<Persistables.Origin, Public.Origin>()
-            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Uuid));
+        config.NewConfig<Persistables.Origin, Public.Origin>()
+            .Map(dest => dest.Id, src => src.Uuid);
         
-        CreateMap<Public.Embedding, Persistables.Embedding>()
-            .ForMember(dest => dest.Id, opt => opt.Ignore())
-            .ForMember(dest => dest.Uuid, opt => opt.MapFrom(src => src.Id));
+        config.NewConfig<Public.Embedding, Persistables.Embedding>()
+            .Ignore(dest => dest.Id!)
+            .Map(dest => dest.Uuid, src => src.Id);
         
-        CreateMap<Persistables.Embedding, Public.Embedding>()
-            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Uuid));
+        config.NewConfig<Persistables.Embedding, Public.Embedding>()
+            .Map(dest => dest.Id, src => src.Uuid);
         
-        CreateMap<Public.Chunk, Persistables.Chunk>()
-            .ForMember(dest => dest.Id, opt => opt.Ignore())
-            .ForMember(dest => dest.Uuid, opt => opt.MapFrom(src => src.Id))
-            .ForMember(dest => dest.Data, opt => opt.MapFrom(src => new Vector(new ReadOnlyMemory<float>(src.Data))));
+        config.NewConfig<Public.Chunk, Persistables.Chunk>()
+            .Ignore(dest => dest.Id!)
+            .Map(dest => dest.Uuid, src => src.Id)
+            .Map(dest => dest.Data, src => new Vector(new ReadOnlyMemory<float>(src.Data)));
         
-        CreateMap<Persistables.Chunk, Public.Chunk>()
-            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Uuid))
-            .ForMember(dest => dest.Data, opt => opt.MapFrom(src => src.Data.ToArray()));
+        config.NewConfig<Persistables.Chunk, Public.Chunk>()
+            .Map(dest => dest.Id, src => src.Uuid)
+            .Map(dest => dest.Data, src => src.Data.ToArray());
     }
 }

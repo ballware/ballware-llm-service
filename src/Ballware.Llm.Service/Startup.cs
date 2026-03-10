@@ -157,7 +157,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
             options.RequireHttpsMetadata = authorizationOptions.RequireHttpsMetadata;
             options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
             {
-                ValidIssuer = authorizationOptions.Authority
+                ValidIssuer = authorizationOptions.Issuer ?? authorizationOptions.Authority
             };
             
             options.Events = new JwtBearerEvents

@@ -9,7 +9,7 @@ using Quartz;
 
 namespace Ballware.Llm.Jobs.Internal;
 
-public class OriginCreateEmbeddingJob(IServiceProvider serviceProvider, IOriginRepository originRepository, IEmbeddingRepository embeddingRepository, IChunkRepository chunkRepository, ChunkerRegistry chunkerRegistry, IOllamaModelBridge modelBridge) : IJob
+public class OriginCreateEmbeddingJob(IServiceProvider serviceProvider, IOriginRepository originRepository, IEmbeddingRepository embeddingRepository, IChunkRepository chunkRepository, ChunkerRegistry chunkerRegistry, IAiModelBridge modelBridge) : IJob
 {
     public static readonly JobKey Key = new JobKey("createembedding", "origin");
 

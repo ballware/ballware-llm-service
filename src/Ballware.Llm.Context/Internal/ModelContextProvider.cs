@@ -5,7 +5,7 @@ using SmartFormat;
 
 namespace Ballware.Llm.Context.Internal;
 
-internal class ModelContextProvider(ContextOptions options, IOllamaModelBridge modelBridge, IContextRepository contextRepository, IOriginRepository originRepository, IEmbeddingRepository embeddingRepository, IChunkRepository chunkRepository) : IModelContextProvider
+internal class ModelContextProvider(ContextOptions options, IAiModelBridge modelBridge, IContextRepository contextRepository, IOriginRepository originRepository, IEmbeddingRepository embeddingRepository, IChunkRepository chunkRepository) : IModelContextProvider
 {
     public async Task<string> ProvideWelcomeMessageAsync(Guid tenantId, string contextIdentifier)
     {

@@ -13,12 +13,12 @@ public static class ServiceCollectionExtensions
         OllamaOptions options,
         Action<IServiceProvider, IToolRegistry>? registerTools = null)
     {
-        var toolRegistry = new OllamaToolRegistry();
+        var toolRegistry = new AiToolRegistry();
 
         services.AddSingleton(options);
         services.AddSingleton(toolRegistry);
         services.AddSingleton<IToolRegistry>(toolRegistry);
-        services.AddSingleton<IOllamaModelBridge, OllamaModelBridge>();
+        services.AddSingleton<IAiModelBridge, AiModelBridge>();
 
         if (registerTools != null)
         {

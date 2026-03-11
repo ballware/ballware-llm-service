@@ -1,6 +1,6 @@
 namespace Ballware.Llm.Engine.Ollama;
 
-public class OllamaChatOptions
+public class AiChatOptions
 {
     public string? Model { get; set; }
     public int? NumCtx { get; set; }

@@ -2,6 +2,7 @@ using Ballware.Llm.Context;
 using Ballware.Llm.Metadata;
 using Ballware.Llm.Engine.Ollama;
 using Ballware.Shared.Authorization;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,16 +14,24 @@ public class ChatHub(IServiceProvider serviceProvider, IPrincipalUtils principal
 {
     public override async Task OnConnectedAsync()
     {
+        var httpContext = Context.GetHttpContext();
+        
         if (Context.User?.Identity == null || !Context.User.Identity.IsAuthenticated)
         {
             throw new UnauthorizedAccessException("User is not authenticated.");
+        }
+
+        if (httpContext == null)
+        {
+            throw new ArgumentNullException(nameof(httpContext));
         }
         
         var tenantId = principalUtils.GetUserTenandId(Context.User);
         var userId = principalUtils.GetUserId(Context.User);
         var userClaims = principalUtils.GetUserClaims(Context.User);
+        var userAccessToken = await httpContext.GetTokenAsync("access_token");
         
-        sessionStore.Add(new ChatSession(Context.ConnectionId, "global", tenantId, userId, userClaims));
+        sessionStore.Add(new ChatSession(Context.ConnectionId, "global", tenantId, userId, userClaims, userAccessToken));
         
         await base.OnConnectedAsync();
         
@@ -51,10 +60,10 @@ public class ChatHub(IServiceProvider serviceProvider, IPrincipalUtils principal
         if (session.Chat == null)
         {
             var scope = serviceProvider.CreateScope();
-            var ollamaModelBridge = scope.ServiceProvider.GetRequiredService<IOllamaModelBridge>();
+            var ollamaModelBridge = scope.ServiceProvider.GetRequiredService<IAiModelBridge>();
             var modelContextProvider = scope.ServiceProvider.GetRequiredService<IModelContextProvider>();
             
-            await session.StartChatAsync(ollamaModelBridge, modelContextProvider, message);
+            await session.StartChatAsync(scope.ServiceProvider, ollamaModelBridge, modelContextProvider, message);
         }
         
         await session.Chat.PromptAsync(message, (token) => Clients.Caller.SendAsync("Response", token));

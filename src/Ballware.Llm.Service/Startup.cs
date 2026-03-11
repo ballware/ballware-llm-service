@@ -64,6 +64,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         EmbeddingOptions? embeddingOptions = Configuration.GetSection("Embedding").Get<EmbeddingOptions>();
         OllamaOptions? ollamaOptions = Configuration.GetSection("Ollama").Get<OllamaOptions>();
         DoclingOptions? doclingOptions = Configuration.GetSection("Docling").Get<DoclingOptions>();
+        McpOptions? mcpAgentOptions = Configuration.GetSection("Mcp").Get<McpOptions>();
         ServiceClientOptions? storageClientOptions = Configuration.GetSection("StorageClient").Get<ServiceClientOptions>();
         ServiceClientOptions? metaClientOptions = Configuration.GetSection("MetaClient").Get<ServiceClientOptions>();
         
@@ -95,6 +96,10 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         
         Services.AddOptionsWithValidateOnStart<DoclingOptions>()
             .Bind(Configuration.GetSection("Docling"))
+            .ValidateDataAnnotations();
+        
+        Services.AddOptionsWithValidateOnStart<McpOptions>()
+            .Bind(Configuration.GetSection("Mcp"))
             .ValidateDataAnnotations();
        
         Services.AddOptionsWithValidateOnStart<ServiceClientOptions>()
@@ -130,6 +135,11 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         {
             throw new ConfigurationException("Required configuration for docling is missing");
         }
+
+        if (mcpAgentOptions == null)
+        {
+            mcpAgentOptions = new McpOptions();
+        }
         
         if (metaClientOptions == null)
         {
@@ -155,6 +165,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
             options.Authority = authorizationOptions.Authority;
             options.Audience = authorizationOptions.Audience;
             options.RequireHttpsMetadata = authorizationOptions.RequireHttpsMetadata;
+            options.SaveToken = true;
             options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
             {
                 ValidIssuer = authorizationOptions.Issuer ?? authorizationOptions.Authority
@@ -217,8 +228,8 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         {
             options.SerializerOptions.PropertyNamingPolicy = null;
         });
-
-        Services.AddClientCredentialsTokenManagement()
+        
+        var clientCredentialsTokenManagementBuilder = Services.AddClientCredentialsTokenManagement()
             .AddClient("meta", client =>
             {
                 client.TokenEndpoint = new Uri(metaClientOptions.TokenEndpoint);
@@ -237,6 +248,33 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
 
                 client.Scope = Scope.Parse(storageClientOptions.Scopes);
             });
+        
+        foreach (var mcpClientOptions in mcpAgentOptions.Agents)
+        {
+            /*
+            clientCredentialsTokenManagementBuilder.AddClient($"mcp.{mcpClientOptions.Namespace}", client =>
+            {
+                client.TokenEndpoint = new Uri(mcpClientOptions.TokenEndpoint);
+
+                client.ClientId = ClientId.Parse(mcpClientOptions.ClientId);
+                client.ClientSecret = ClientSecret.Parse(mcpClientOptions.ClientSecret);
+
+                client.Scope = Scope.Parse(mcpClientOptions.Scopes);
+            });
+            */
+
+            Services.AddHttpClient($"mcp.{mcpClientOptions.Namespace}", client =>
+            {
+                client.BaseAddress = new Uri(mcpClientOptions.ServiceUrl);
+            })
+#if DEBUG            
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler()
+            {
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            })
+#endif            
+            /*.AddClientCredentialsTokenHandler(ClientCredentialsClientName.Parse($"mcp.{mcpClientOptions.Namespace}"))*/;
+        };
         
         Services.AddHttpClient<StorageServiceClient>(client =>
             {
@@ -305,7 +343,13 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         Services.AddBallwareOllamaEngine(ollamaOptions, (serviceProvider, toolRegistry) =>
         {
             toolRegistry.RegisterBallwareLlmCommonTools(serviceProvider);
+            
+            foreach (var mcpClientOptions in mcpAgentOptions.Agents)
+            {
+                toolRegistry.RegisterMcpService($"mcp.{mcpClientOptions.Namespace}");
+            }
         });
+        
         Services.AddBallwareIngestionForDocling(doclingOptions);
         Services.AddBallwareEmbeddingChunker(embeddingOptions);
         

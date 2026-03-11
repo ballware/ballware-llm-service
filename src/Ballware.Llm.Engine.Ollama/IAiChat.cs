@@ -1,6 +1,6 @@
 namespace Ballware.Llm.Engine.Ollama;
 
-public interface IOllamaChat
+public interface IAiChat
 {
     Task PromptAsync(string message, Action<string> tokenHandler);
 }

@@ -6,7 +6,7 @@ namespace Ballware.Llm.Engine.Ollama.Internal;
 
 class AiToolRegistry : IToolRegistry
 {
-    private readonly HashSet<string> _mcpServiceIdentifiers = [];
+    private readonly List<IMcpService> _services = [];
     private readonly List<IToolProvider> _providers = [];
 
     public void RegisterToolProvider(IToolProvider toolProvider)
@@ -14,12 +14,12 @@ class AiToolRegistry : IToolRegistry
         _providers.Add(toolProvider);
     }
 
-    public void RegisterMcpService(string identifier)
+    public void RegisterMcpService(IMcpService mcpService)
     {
-        _mcpServiceIdentifiers.Add(identifier);
+        _services.Add(mcpService);
     }
 
-    internal IEnumerable<string> GetMcpServiceIdentifiers() => _mcpServiceIdentifiers;
+    internal IEnumerable<IMcpService> GetMcpServices() => _services;
     
     internal IEnumerable<AITool> GetToolsForUser(Guid tenantId, Guid userId, IDictionary<string, object> claims)
     {

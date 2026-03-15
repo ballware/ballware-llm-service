@@ -65,6 +65,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         OllamaOptions? ollamaOptions = Configuration.GetSection("Ollama").Get<OllamaOptions>();
         DoclingOptions? doclingOptions = Configuration.GetSection("Docling").Get<DoclingOptions>();
         McpOptions? mcpAgentOptions = Configuration.GetSection("Mcp").Get<McpOptions>();
+        ServiceCredentialOptions? serviceCredentialOptions = Configuration.GetSection("ServiceCredentials").Get<ServiceCredentialOptions>(); 
         ServiceClientOptions? storageClientOptions = Configuration.GetSection("StorageClient").Get<ServiceClientOptions>();
         ServiceClientOptions? metaClientOptions = Configuration.GetSection("MetaClient").Get<ServiceClientOptions>();
         
@@ -100,6 +101,10 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         
         Services.AddOptionsWithValidateOnStart<McpOptions>()
             .Bind(Configuration.GetSection("Mcp"))
+            .ValidateDataAnnotations();
+        
+        Services.AddOptionsWithValidateOnStart<ServiceCredentialOptions>()
+            .Bind(Configuration.GetSection("ServiceCredentials"))
             .ValidateDataAnnotations();
        
         Services.AddOptionsWithValidateOnStart<ServiceClientOptions>()
@@ -139,6 +144,11 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         if (mcpAgentOptions == null)
         {
             mcpAgentOptions = new McpOptions();
+        }
+
+        if (serviceCredentialOptions == null)
+        {
+            serviceCredentialOptions = new ServiceCredentialOptions();       
         }
         
         if (metaClientOptions == null)
@@ -228,55 +238,46 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         {
             options.SerializerOptions.PropertyNamingPolicy = null;
         });
+
+        var clientCredentialsTokenManagementBuilder = Services.AddClientCredentialsTokenManagement();
         
-        var clientCredentialsTokenManagementBuilder = Services.AddClientCredentialsTokenManagement()
-            .AddClient("meta", client =>
-            {
-                client.TokenEndpoint = new Uri(metaClientOptions.TokenEndpoint);
+        foreach (var serviceCredential in serviceCredentialOptions.Credentials)
+        {
+            clientCredentialsTokenManagementBuilder
+                .AddClient(serviceCredential.Identifier, client =>
+                {
+                    client.TokenEndpoint = new Uri(serviceCredential.TokenEndpoint);
 
-                client.ClientId = ClientId.Parse(metaClientOptions.ClientId);
-                client.ClientSecret = ClientSecret.Parse(metaClientOptions.ClientSecret);
+                    client.ClientId = ClientId.Parse(serviceCredential.ClientId);
+                    client.ClientSecret = ClientSecret.Parse(serviceCredential.ClientSecret);
 
-                client.Scope = Scope.Parse(metaClientOptions.Scopes);
-            })
-            .AddClient("storage", client =>
-            {
-                client.TokenEndpoint = new Uri(storageClientOptions.TokenEndpoint);
-
-                client.ClientId = ClientId.Parse(storageClientOptions.ClientId);
-                client.ClientSecret = ClientSecret.Parse(storageClientOptions.ClientSecret);
-
-                client.Scope = Scope.Parse(storageClientOptions.Scopes);
-            });
+                    client.Scope = Scope.Parse(serviceCredential.Scopes);
+                });
+        }
         
         foreach (var mcpClientOptions in mcpAgentOptions.Agents)
         {
-            /*
-            clientCredentialsTokenManagementBuilder.AddClient($"mcp.{mcpClientOptions.Namespace}", client =>
-            {
-                client.TokenEndpoint = new Uri(mcpClientOptions.TokenEndpoint);
+            var httpClientBuilder = Services.AddHttpClient($"mcp.{mcpClientOptions.Namespace}", client =>
+                    {
+                        client.BaseAddress = new Uri(mcpClientOptions.ServiceUrl);
+                    })
+#if DEBUG
+                    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler()
+                    {
+                        ServerCertificateCustomValidationCallback =
+                            HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                    })
+#endif
+                ;
 
-                client.ClientId = ClientId.Parse(mcpClientOptions.ClientId);
-                client.ClientSecret = ClientSecret.Parse(mcpClientOptions.ClientSecret);
-
-                client.Scope = Scope.Parse(mcpClientOptions.Scopes);
-            });
-            */
-
-            Services.AddHttpClient($"mcp.{mcpClientOptions.Namespace}", client =>
+            if (!mcpClientOptions.UserTokenDelegation && !string.IsNullOrEmpty(mcpClientOptions.CredentialIdentifier))
             {
-                client.BaseAddress = new Uri(mcpClientOptions.ServiceUrl);
-            })
-#if DEBUG            
-            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler()
-            {
-                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-            })
-#endif            
-            /*.AddClientCredentialsTokenHandler(ClientCredentialsClientName.Parse($"mcp.{mcpClientOptions.Namespace}"))*/;
+                httpClientBuilder.AddClientCredentialsTokenHandler(
+                    ClientCredentialsClientName.Parse(mcpClientOptions.CredentialIdentifier));
+            }
         };
         
-        Services.AddHttpClient<StorageServiceClient>(client =>
+        var storageClientBuilder = Services.AddHttpClient<StorageServiceClient>(client =>
             {
                 client.BaseAddress = new Uri(storageClientOptions.ServiceUrl);
             })
@@ -286,9 +287,14 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
                 ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
             })
 #endif            
-            .AddClientCredentialsTokenHandler(ClientCredentialsClientName.Parse("storage"));
+            ;
+
+        if (!string.IsNullOrEmpty(storageClientOptions.CredentialIdentifier))
+        {
+            storageClientBuilder.AddClientCredentialsTokenHandler(ClientCredentialsClientName.Parse(storageClientOptions.CredentialIdentifier));
+        }
         
-        Services.AddHttpClient<MetaServiceClient>(client =>
+        var metaClientBuilder = Services.AddHttpClient<MetaServiceClient>(client =>
             {
                 client.BaseAddress = new Uri(metaClientOptions.ServiceUrl);
             })
@@ -298,7 +304,12 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
                 ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
             })
 #endif                  
-            .AddClientCredentialsTokenHandler(ClientCredentialsClientName.Parse("meta"));
+            ;
+
+        if (!string.IsNullOrEmpty(metaClientOptions.CredentialIdentifier))
+        {
+            metaClientBuilder.AddClientCredentialsTokenHandler(ClientCredentialsClientName.Parse(metaClientOptions.CredentialIdentifier));       
+        }
 
         var mapsterConfig = new TypeAdapterConfig()
             .AddBallwareLlmStorageMappings();
@@ -346,7 +357,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
             
             foreach (var mcpClientOptions in mcpAgentOptions.Agents)
             {
-                toolRegistry.RegisterMcpService($"mcp.{mcpClientOptions.Namespace}");
+                toolRegistry.RegisterMcpService(new McpService($"mcp.{mcpClientOptions.Namespace}", mcpClientOptions.UserTokenDelegation));
             }
         });
         

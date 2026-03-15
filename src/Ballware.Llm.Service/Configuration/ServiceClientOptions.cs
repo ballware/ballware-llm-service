@@ -7,15 +7,7 @@ public class ServiceClientOptions
     [Required]
     public required string ServiceUrl { get; set; }
     
-    [Required]
-    public required string TokenEndpoint { get; set; }
+    public bool ForwardUserIdentity { get; set; } = false;
     
-    [Required]
-    public required string ClientId { get; set; }
-    
-    [Required]
-    public required string ClientSecret { get; set; }
-    
-    [Required]
-    public required string Scopes { get; set; }
+    public string? CredentialIdentifier { get; set; }
 }

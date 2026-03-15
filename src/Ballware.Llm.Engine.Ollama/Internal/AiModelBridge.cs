@@ -52,9 +52,9 @@ internal class AiModelBridge : IAiModelBridge
         
         var httpClientFactory = serviceProvider.GetService<IHttpClientFactory>();
         
-        foreach (var mcpIdentifier in ToolRegistry.GetMcpServiceIdentifiers())
+        foreach (var mcpService in ToolRegistry.GetMcpServices())
         {
-            var httpClient = httpClientFactory?.CreateClient(mcpIdentifier);
+            var httpClient = httpClientFactory?.CreateClient(mcpService.Identifier);
             
             if (httpClient != null)
             {
@@ -63,7 +63,7 @@ internal class AiModelBridge : IAiModelBridge
                     Endpoint = httpClient.BaseAddress ?? new Uri("/"),
                 };
                 
-                if (!string.IsNullOrEmpty(userAccessToken))
+                if (mcpService.UserTokenDelegation && !string.IsNullOrEmpty(userAccessToken))
                 {
                     if (transportOptions.AdditionalHeaders == null)
                     {

@@ -2,32 +2,39 @@ using Ballware.Llm.Engine.Ollama.Configuration;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Client;
-using OllamaSharp;
-using OllamaSharp.Models;
+using OpenAI;
+using OpenAI.Chat;
+using OpenAI.Embeddings;
+using System.ClientModel;
 
 namespace Ballware.Llm.Engine.Ollama.Internal;
 
 internal class AiModelBridge : IAiModelBridge
 {
+    private const string OllamaApiKey = "ollama";
+    
     private OllamaOptions Options { get; }
     private AiToolRegistry ToolRegistry { get; }
     private IChatClient InferenceApiClient { get; }
-    private IOllamaApiClient EmbeddingApiClient { get; }
+    private IEmbeddingGenerator<string, Embedding<float>> EmbeddingApiClient { get; }
     
     public AiModelBridge(OllamaOptions options, AiToolRegistry toolRegistry)
     {
         Options = options;
         ToolRegistry = toolRegistry;
-        
-        InferenceApiClient = new OllamaApiClient(Options.Url)
+
+        var clientOptions = new OpenAIClientOptions()
         {
-            SelectedModel = Options.InferenceModel
+            Endpoint = BuildOpenAiEndpoint(Options.Url)
         };
 
-        EmbeddingApiClient = new OllamaApiClient(Options.Url)
-        {
-            SelectedModel = Options.EmbeddingModel,
-        };
+        var credential = new ApiKeyCredential(OllamaApiKey);
+
+        InferenceApiClient = new ChatClient(Options.InferenceModel, credential, clientOptions)
+            .AsIChatClient();
+
+        EmbeddingApiClient = new EmbeddingClient(Options.EmbeddingModel, credential, clientOptions)
+            .AsIEmbeddingGenerator();
     }
 
     public async Task<IAiChat> StartChatAsync(IServiceProvider serviceProvider, AiChatOptions options, Guid tenantId, Guid userId, IDictionary<string, object> claims, string? userAccessToken)
@@ -95,12 +102,36 @@ internal class AiModelBridge : IAiModelBridge
 
     public async Task<float[]> EmbedAsync(string chunk, string? model)
     {
-        var embedResponse = await EmbeddingApiClient.EmbedAsync(new EmbedRequest()
-        {   
-            Model = model ?? Options.EmbeddingModel,
-            Input = [chunk]
-        });
+        var embeddingOptions = new Microsoft.Extensions.AI.EmbeddingGenerationOptions()
+        {
+            ModelId = model ?? Options.EmbeddingModel
+        };
+        
+        var vector = await EmbeddingApiClient.GenerateVectorAsync(chunk, embeddingOptions);
+        
+        return vector.ToArray();
+    }
 
-        return embedResponse.Embeddings[0];
+    private static Uri BuildOpenAiEndpoint(string baseUrl)
+    {
+        var baseUri = new Uri(baseUrl, UriKind.Absolute);
+        var currentPath = baseUri.AbsolutePath.TrimEnd('/');
+        
+        if (string.IsNullOrEmpty(currentPath) || currentPath == "/")
+        {
+            return new Uri(baseUri, "v1");
+        }
+
+        if (currentPath.EndsWith("/v1", StringComparison.OrdinalIgnoreCase))
+        {
+            return baseUri;
+        }
+
+        var builder = new UriBuilder(baseUri)
+        {
+            Path = $"{currentPath}/v1"
+        };
+
+        return builder.Uri;
     }
 }

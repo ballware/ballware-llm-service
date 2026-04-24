@@ -9,7 +9,8 @@ public static class ToolRegistryExtensions
     public static IToolRegistry RegisterBallwareLlmCommonTools(
         this IToolRegistry registry, IServiceProvider serviceProvider)
     {
-        registry.RegisterToolProvider(serviceProvider.GetRequiredService<MathToolProvider>());
+        registry.RegisterStaticToolProvider(serviceProvider.GetRequiredService<MathToolProvider>());
+        registry.RegisterScopedToolProvider<EmbeddingsToolProvider>();
         
         return registry;
     }

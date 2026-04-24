@@ -9,6 +9,7 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services)
     {
         services.AddSingleton<MathToolProvider>();
+        services.AddScoped<EmbeddingsToolProvider>();
         
         return services;
     }

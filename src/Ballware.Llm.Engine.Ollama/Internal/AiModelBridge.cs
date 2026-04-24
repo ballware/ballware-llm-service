@@ -55,7 +55,7 @@ internal class AiModelBridge : IAiModelBridge
         
         var tools = new List<AITool>();
         
-        tools.AddRange(ToolRegistry.GetToolsForUser(tenantId, userId, claims));
+        tools.AddRange(ToolRegistry.GetToolsForUser(serviceProvider, tenantId, userId, claims));
         
         var httpClientFactory = serviceProvider.GetService<IHttpClientFactory>();
         

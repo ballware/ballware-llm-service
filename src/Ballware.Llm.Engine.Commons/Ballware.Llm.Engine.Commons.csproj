@@ -8,6 +8,8 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Ballware.Llm.Engine\Ballware.Llm.Engine.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Data\Ballware.Llm.Data.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Engine.Ollama\Ballware.Llm.Engine.Ollama.csproj" />
     </ItemGroup>
 
     <ItemGroup>

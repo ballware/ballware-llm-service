@@ -33,4 +33,11 @@ public class OriginBaseRepository(IMapper mapper, ILlmDbContext dbContext, IEmbe
             dbContext.Set<Persistables.Origin>()
                 .Where(o => o.TenantId == tenantId && o.GlobalContext).ToList()));
     }
+    
+    public Task<IEnumerable<Origin>> GetQueryableOriginsAsync(Guid tenantId)
+    {
+        return Task.FromResult(Mapper.Map<IEnumerable<Public.Origin>>(
+            dbContext.Set<Persistables.Origin>()
+                .Where(o => o.TenantId == tenantId && !o.GlobalContext).ToList()));
+    }
 }

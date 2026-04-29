@@ -16,4 +16,5 @@ public class LlmDbContext : DbContext, ILlmDbContext
     public DbSet<Origin>  Origins { get; set; }
     public DbSet<Embedding>  Embeddings { get; set; }
     public DbSet<Chunk>  Chunks { get; set; }
+    public DbSet<Image> Images { get; set; }
 }

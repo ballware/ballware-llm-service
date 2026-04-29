@@ -1,0 +1,39 @@
+{
+  "document": {
+    "title": "Umsatzbericht Q1",
+    "sections": [
+      {
+        "type": "paragraph",
+        "text": "Ein strukturierter Bericht mit Diagramm."
+      },
+      {
+        "type": "table",
+        "rows": [
+          ["Monat", "Umsatz"],
+          ["Januar", "1200"],
+          ["Februar", "980"]
+        ]
+      }
+    ],
+    "images": [
+      {
+        "content_type": "image/png",
+        "filename": "chart.png",
+        "caption": "Revenue chart",
+        "image_base64": "aW1hZ2UtYnl0ZXMtMQ=="
+      },
+      {
+        "contentType": "image/jpeg",
+        "captions": [
+          { "text": "Product overview" }
+        ],
+        "data": "aW1hZ2UtYnl0ZXMtMg=="
+      },
+      {
+        "content_type": "image/png",
+        "filename": "chart-duplicate.png",
+        "image_base64": "aW1hZ2UtYnl0ZXMtMQ=="
+      }
+    ]
+  }
+}

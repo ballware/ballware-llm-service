@@ -4,12 +4,13 @@ public class DoclingMarkdownIngestor(IDoclingClient doclingClient ) : IKnowledge
 {
     public async Task<IngestionResult> IngestFromStreamAsync(string type, Stream payload)
     {
-        var ingestionResult = await doclingClient.ConvertToMarkdownAsync(type, payload);
+        var ingestionResult = await doclingClient.ConvertToMarkdownWithImagesAsync(type, payload);
 
         return new IngestionResult()
         {
             Format = "text/markdown",
-            Payload = ingestionResult,
+            Payload = ingestionResult.Markdown,
+            Images = ingestionResult.Images
         };
     }
 }

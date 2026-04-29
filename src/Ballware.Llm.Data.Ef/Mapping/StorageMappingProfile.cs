@@ -37,5 +37,14 @@ class StorageMappingProfile : IRegister
         config.NewConfig<Persistables.Chunk, Public.Chunk>()
             .Map(dest => dest.Id, src => src.Uuid)
             .Map(dest => dest.Data, src => src.Data.ToArray());
+        
+        config.NewConfig<Public.Image, Persistables.Image>()
+            .Ignore(dest => dest.Id!)
+            .Map(dest => dest.Uuid, src => src.Id)
+            .Map(dest => dest.Data, src => new Vector(new ReadOnlyMemory<float>(src.Data)));
+        
+        config.NewConfig<Persistables.Image, Public.Image>()
+            .Map(dest => dest.Id, src => src.Uuid)
+            .Map(dest => dest.Data, src => src.Data.ToArray());
     }
 }

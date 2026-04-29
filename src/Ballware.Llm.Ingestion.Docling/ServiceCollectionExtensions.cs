@@ -1,4 +1,5 @@
 using System.Configuration;
+using Ballware.Llm.Docling.Client;
 using Ballware.Llm.Ingestion.Docling.Configuration;
 using Ballware.Llm.Ingestion.Docling.Internal;
 using Microsoft.Extensions.DependencyInjection;

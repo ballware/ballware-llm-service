@@ -7,6 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Ballware.Llm.Docling.Client\Ballware.Llm.Docling.Client.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Ingestion\Ballware.Llm.Ingestion.csproj" />
     </ItemGroup>
 

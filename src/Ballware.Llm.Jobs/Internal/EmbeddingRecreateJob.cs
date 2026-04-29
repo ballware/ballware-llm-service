@@ -8,7 +8,15 @@ using Quartz;
 
 namespace Ballware.Llm.Jobs.Internal;
 
-public class EmbeddingRecreateJob(IServiceProvider serviceProvider, IOriginRepository originRepository, IEmbeddingRepository embeddingRepository, IChunkRepository chunkRepository, ChunkerRegistry chunkerRegistry, IAiModelBridge modelBridge, EmbeddingOptions options) : IJob
+public class EmbeddingRecreateJob(
+    IServiceProvider serviceProvider,
+    IOriginRepository originRepository,
+    IEmbeddingRepository embeddingRepository,
+    IChunkRepository chunkRepository,
+    IImageRepository imageRepository,
+    ChunkerRegistry chunkerRegistry,
+    IAiModelBridge modelBridge,
+    EmbeddingOptions options) : IJob
 {
     public static readonly JobKey Key = new JobKey("recreate", "embedding");
 
@@ -65,5 +73,28 @@ public class EmbeddingRecreateJob(IServiceProvider serviceProvider, IOriginRepos
 
             await chunkRepository.SaveAsync(tenantId, userId, "primary", ImmutableDictionary<string, object>.Empty, chunk);
         }
+
+        var images = (await imageRepository.GetByOriginAsync(tenantId, origin.Id)).ToList();
+
+        foreach (var image in images.Where(image => !string.IsNullOrWhiteSpace(image.Text)))
+        {
+            var chunkText = BuildImageChunkText(image);
+            var imageChunkEmbedding = await modelBridge.EmbedAsync(chunkText, embedding.Model);
+
+            var imageChunk = new Data.Public.Chunk()
+            {
+                Id = Guid.NewGuid(),
+                EmbeddingId = embedding.Id,
+                Text = chunkText,
+                Data = imageChunkEmbedding.ToArray()
+            };
+
+            await chunkRepository.SaveAsync(tenantId, userId, "primary", ImmutableDictionary<string, object>.Empty, imageChunk);
+        }
+    }
+
+    private static string BuildImageChunkText(Data.Public.Image image)
+    {
+        return $"[Bildinhalt] Name: {image.Name}{Environment.NewLine}Beschreibung: {image.Description}{Environment.NewLine}{image.Text}";
     }
 }

@@ -6,7 +6,7 @@ using MapsterMapper;
 
 namespace Ballware.Llm.Data.Ef.Repository;
 
-public class OriginBaseRepository(IMapper mapper, ILlmDbContext dbContext, IEmbeddingRepository embeddingRepository, ITenantableRepositoryHook<Public.Origin, Persistables.Origin>? hook = null) 
+public class OriginBaseRepository(IMapper mapper, ILlmDbContext dbContext, IEmbeddingRepository embeddingRepository, IImageRepository imageRepository, ITenantableRepositoryHook<Public.Origin, Persistables.Origin>? hook = null) 
     : TenantableBaseRepository<Public.Origin, Persistables.Origin>(mapper, dbContext, hook), IOriginRepository
 {
     protected override async Task BeforeRemoveAsync(Guid tenantId, Guid? userId, IDictionary<string, object> claims, Persistables.Origin persistable)
@@ -25,6 +25,20 @@ public class OriginBaseRepository(IMapper mapper, ILlmDbContext dbContext, IEmbe
                 { "Id", embedding.Id }
             });
         }
+
+        var images = (await imageRepository.QueryAsync(tenantId, "origin", claims, new Dictionary<string, object>
+        {
+            { "origin", persistable.Uuid }
+        })).ToList();
+
+        foreach (var image in images)
+        {
+            await imageRepository.RemoveAsync(tenantId, userId, claims, new Dictionary<string, object>
+            {
+                { "Id", image.Id }
+            });
+        }
+
     }
 
     public Task<IEnumerable<Origin>> GetGlobalOriginsAsync(Guid tenantId)

@@ -5,6 +5,7 @@ using Ballware.Llm.Context.Configuration;
 using Ballware.Llm.Data.Ef;
 using Ballware.Llm.Data.Ef.Configuration;
 using Ballware.Llm.Data.Ef.Postgres;
+using Ballware.Llm.Docling.Client;
 using Ballware.Llm.Embedding;
 using Ballware.Llm.Embedding.Configuration;
 using Ballware.Llm.Engine.Commons;
@@ -42,6 +43,7 @@ using Microsoft.OpenApi;
 using Serilog;
 using Quartz;
 using Scope = Duende.AccessTokenManagement.Scope;
+using Uri = System.Uri;
 
 namespace Ballware.Llm.Service;
 
@@ -310,6 +312,12 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         {
             metaClientBuilder.AddClientCredentialsTokenHandler(ClientCredentialsClientName.Parse(metaClientOptions.CredentialIdentifier));       
         }
+        
+        Services.AddHttpClient<DoclingApiClient>(client =>
+        {
+            client.BaseAddress = new Uri(doclingOptions.Url);
+            client.Timeout = TimeSpan.FromSeconds(doclingOptions.RequestTimeoutSeconds);
+        });
 
         var mapsterConfig = new TypeAdapterConfig()
             .AddBallwareLlmStorageMappings();
@@ -347,6 +355,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         Services.AddScoped<IFileStorageProvider, StorageServiceFileStorageAdapter>();
         Services.AddScoped<IJobFileStorageAdapter, StorageServiceFileStorageAdapter>();
         Services.AddScoped<ITenantableRepositoryHook<Data.Public.Origin, Data.Persistables.Origin>, OriginPayloadRepositoryHook>();
+        Services.AddScoped<ITenantableRepositoryHook<Data.Public.Image, Data.Persistables.Image>, ImagePayloadRepositoryHook>();
 
         Services.AddBallwareLlmApiDependencies();
         Services.AddBallwareLlmContext(contextOptions);
@@ -450,6 +459,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         app.MapTenantableEditingApi<Data.Public.Origin>("/ai/origin", "ai", "origin", "Origin", "Origin", "mlApi", "llm");
         app.MapTenantableEditingApi<Data.Public.Embedding>("/ai/embedding", "ai", "embedding", "Embedding", "Embedding", "mlApi", "llm");
         app.MapTenantableEditingApi<Data.Public.Chunk>("/ai/chunk", "ai", "chunk", "Chunk", "Chunk", "mlApi", "llm");
+        app.MapTenantableEditingApi<Data.Public.Image>("/ai/image", "ai", "image", "Image", "Image", "mlApi", "llm");
         
         var authorizationOptions = app.Services.GetService<IOptions<AuthorizationOptions>>()?.Value;
         var swaggerOptions = app.Services.GetService<IOptions<SwaggerOptions>>()?.Value;

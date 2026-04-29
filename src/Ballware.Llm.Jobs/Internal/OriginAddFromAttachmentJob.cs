@@ -1,12 +1,18 @@
 using System.Collections.Immutable;
 using Ballware.Llm.Data.Public;
 using Ballware.Llm.Data.Repository;
+using Ballware.Llm.Engine.Ollama;
 using Ballware.Llm.Ingestion;
 using Quartz;
 
 namespace Ballware.Llm.Jobs.Internal;
 
-public class OriginAddFromAttachmentJob(IJobFileStorageAdapter storageAdapter, IOriginRepository originRepository, IKnowledgeIngestor ingestor) : IJob
+public class OriginAddFromAttachmentJob(
+    IJobFileStorageAdapter storageAdapter,
+    IOriginRepository originRepository,
+    IImageRepository imageRepository,
+    IAiModelBridge modelBridge,
+    IKnowledgeIngestor ingestor) : IJob
 {
     public static readonly JobKey Key = new JobKey("addfromattachment", "origin");
 
@@ -52,5 +58,55 @@ public class OriginAddFromAttachmentJob(IJobFileStorageAdapter storageAdapter, I
         };
 
         await originRepository.SaveAsync(tenantId, userId, "primary", ImmutableDictionary<string, object>.Empty, origin);
+
+        if (ingestionResult.Images.Count > 0)
+        {
+            foreach (var extractedImage in ingestionResult.Images.Where(image => image.Payload.Length > 0))
+            {
+                var embeddingText = BuildEmbeddingText(extractedImage, origin.Name);
+                var imageEmbedding = await modelBridge.EmbedAsync(embeddingText, null);
+
+                var image = new Data.Public.Image()
+                {
+                    Id = Guid.NewGuid(),
+                    OriginId = origin.Id,
+                    Name = string.IsNullOrWhiteSpace(extractedImage.Name) ? "image" : extractedImage.Name,
+                    Description = extractedImage.Description ?? string.Empty,
+                    ContentType = string.IsNullOrWhiteSpace(extractedImage.ContentType) ? "application/octet-stream" : extractedImage.ContentType,
+                    Text = embeddingText,
+                    Data = imageEmbedding.ToArray()
+                };
+
+                await imageRepository.SaveAsync(tenantId, userId, "primary", ImmutableDictionary<string, object>.Empty, image);
+
+                using var imagePayload = new MemoryStream(extractedImage.Payload, writable: false);
+                await storageAdapter.UploadImagePayloadByIdForOwnerBehalfOfUserAsync(tenantId, userId, image.Id, image.ContentType, imagePayload);
+            }
+        }
+    }
+
+    private static string BuildEmbeddingText(IngestionImage image, string originName)
+    {
+        var parts = new List<string>
+        {
+            $"Dokument: {originName}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(image.Name))
+        {
+            parts.Add($"Bilddatei: {image.Name}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(image.Description))
+        {
+            parts.Add($"Beschreibung: {image.Description}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(image.Source))
+        {
+            parts.Add($"Quelle: {image.Source}");
+        }
+
+        return string.Join(Environment.NewLine, parts);
     }
 }

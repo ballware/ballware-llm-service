@@ -18,7 +18,7 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.2")
+                .HasAnnotation("ProductVersion", "10.0.3")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -216,6 +216,84 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
                         .IsUnique();
 
                     b.ToTable("embedding");
+                });
+
+            modelBuilder.Entity("Ballware.Llm.Data.Persistables.Image", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("content_type");
+
+                    b.Property<DateTime?>("CreateStamp")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("create_stamp");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("creator_id");
+
+                    b.Property<Vector>("Data")
+                        .IsRequired()
+                        .HasColumnType("vector(768)")
+                        .HasColumnName("data");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)")
+                        .HasColumnName("description");
+
+                    b.Property<DateTime?>("LastChangeStamp")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_change_stamp");
+
+                    b.Property<Guid?>("LastChangerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("last_changer_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("OriginId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("origin_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(16384)
+                        .HasColumnType("character varying(16384)")
+                        .HasColumnName("text");
+
+                    b.Property<Guid>("Uuid")
+                        .HasColumnType("uuid")
+                        .HasColumnName("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "OriginId");
+
+                    b.HasIndex("TenantId", "Uuid")
+                        .IsUnique();
+
+                    b.ToTable("image");
                 });
 
             modelBuilder.Entity("Ballware.Llm.Data.Persistables.Origin", b =>

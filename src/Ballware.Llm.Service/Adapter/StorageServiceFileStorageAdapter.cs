@@ -1,8 +1,6 @@
-using System.Net.Mime;
 using Ballware.Llm.Jobs;
 using Ballware.Shared.Api;
 using Ballware.Storage.Service.Client;
-using Attachment = Ballware.Llm.Metadata.Attachment;
 
 namespace Ballware.Llm.Service.Adapter;
 
@@ -43,5 +41,24 @@ public class StorageServiceFileStorageAdapter : IFileStorageProvider, IJobFileSt
         var stream = response.Stream;
 
         return (contentType, stream);
+    }
+
+    public async Task UploadImagePayloadByIdForOwnerBehalfOfUserAsync(Guid tenantId, Guid userId, Guid imageId, string contentType, Stream payload)
+    {
+        await StorageClient.AttachmentUploadForTenantEntityAndOwnerBehalfOfUserAsync(tenantId, userId, "image", imageId, [
+            new FileParameter(payload, CreatePayloadFileName(contentType), contentType)
+        ]);
+    }
+
+    private static string CreatePayloadFileName(string contentType)
+    {
+        var evaluatedExtension = MimeTypes.MimeTypeMap.GetExtension(contentType, false);
+
+        if (string.IsNullOrEmpty(evaluatedExtension))
+        {
+            evaluatedExtension = ".bin";
+        }
+
+        return $"payload{(evaluatedExtension.StartsWith('.') ? evaluatedExtension : $".{evaluatedExtension}")}";
     }
 }

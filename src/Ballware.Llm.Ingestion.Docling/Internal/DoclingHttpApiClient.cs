@@ -1,5 +1,5 @@
-using System.Net.Http.Headers;
-using Ballware.Llm.Ingestion.Docling.Configuration;
+using Ballware.Llm.Docling.Client;
+using Ballware.Llm.Ingestion;
 using Newtonsoft.Json;
 
 namespace Ballware.Llm.Ingestion.Docling.Internal;
@@ -31,22 +31,7 @@ public class DoclingConversionResponse
     public required DoclingConversionDocument Document { get; set; }
 }
 
-public class DoclingTaskResponse
-{
-    [JsonProperty(PropertyName = "task_id")]
-    public required string TaskId { get; set; }
-}
-
-public class DoclingStatusResponse
-{
-    [JsonProperty(PropertyName = "task_id")]
-    public required string TaskId { get; set; }
-
-    [JsonProperty(PropertyName = "task_status")]
-    public required string Status { get; set; }
-}
-
-public class DoclingHttpApiClient(DoclingOptions options) : IDoclingClient
+public class DoclingHttpApiClient(DoclingApiClient apiClient) : IDoclingClient
 {
     private const int PollingIntervalMs = 1000;
 
@@ -74,62 +59,50 @@ public class DoclingHttpApiClient(DoclingOptions options) : IDoclingClient
         return result.Document.MarkdownContent;
     }
 
+    public async Task<(string Markdown, IReadOnlyList<IngestionImage> Images)> ConvertToMarkdownWithImagesAsync(string type, Stream input)
+    {
+        var payload = await CopyToByteArrayAsync(input);
+
+        using var markdownStream = new MemoryStream(payload, writable: false);
+        var markdownResult = await ConvertAsync(type, markdownStream, "markdown", "placeholder");
+
+        if (markdownResult.Document.MarkdownContent == null)
+        {
+            throw new InvalidOperationException("Response does not contain markdown content");
+        }
+
+        using var jsonStream = new MemoryStream(payload, writable: false);
+        var jsonResult = await ConvertAsync(type, jsonStream, "json", "embedded");
+
+        var images = DoclingImageExtractor.ExtractImages(jsonResult.Document.JsonContent);
+
+        return (markdownResult.Document.MarkdownContent, images);
+    }
+
     private async Task<DoclingConversionResponse> ConvertAsync(
         string type,
         Stream input,
         string outputFormat,
         string? imageExportMode = null)
     {
-        using var httpClient = new HttpClient();
-        httpClient.Timeout = TimeSpan.FromSeconds(options.RequestTimeoutSeconds);
-        httpClient.BaseAddress = new Uri(options.Url);
+        var taskId = await apiClient.StartFileConversionAsync(
+            input,
+            type,
+            MapOutputFormat(outputFormat),
+            MapImageExportMode(imageExportMode));
 
-        var taskId = await StartConversionAsync(httpClient, type, input, outputFormat, imageExportMode);
+        await WaitForCompletionAsync(taskId);
 
-        await WaitForCompletionAsync(httpClient, taskId);
-
-        return await GetResultAsync(httpClient, taskId);
+        return await GetResultAsync(taskId);
     }
 
-    private async Task<string> StartConversionAsync(
-        HttpClient httpClient,
-        string type,
-        Stream input,
-        string outputFormat,
-        string? imageExportMode)
-    {
-        var request = new MultipartFormDataContent();
-        var fileContent = new StreamContent(input);
-        fileContent.Headers.ContentType = new MediaTypeHeaderValue(type);
-
-        request.Add(fileContent, "files", $"input{MimeTypes.MimeTypeMap.GetExtension(type)}");
-        request.Add(new StringContent(outputFormat), "output_format");
-
-        if (imageExportMode != null)
-        {
-            request.Add(new StringContent(imageExportMode), "image_export_mode");
-        }
-
-        var response = await httpClient.PostAsync("/v1/convert/file/async", request);
-        response.EnsureSuccessStatusCode();
-
-        var result = JsonConvert.DeserializeObject<DoclingTaskResponse>(
-            await response.Content.ReadAsStringAsync());
-
-        return result?.TaskId ?? throw new InvalidOperationException("No task_id in response");
-    }
-
-    private async Task WaitForCompletionAsync(HttpClient httpClient, string taskId)
+    private async Task WaitForCompletionAsync(string taskId)
     {
         while (true)
         {
-            var response = await httpClient.GetAsync($"/v1/status/poll/{taskId}");
-            response.EnsureSuccessStatusCode();
+            var status = await apiClient.Task_status_poll_v1_status_poll__task_id__getAsync(taskId, null);
 
-            var status = JsonConvert.DeserializeObject<DoclingStatusResponse>(
-                await response.Content.ReadAsStringAsync());
-
-            switch (status?.Status)
+            switch (status?.Task_status)
             {
                 case "success":
                     return;
@@ -142,14 +115,36 @@ public class DoclingHttpApiClient(DoclingOptions options) : IDoclingClient
         }
     }
 
-    private async Task<DoclingConversionResponse> GetResultAsync(HttpClient httpClient, string taskId)
+    private async Task<DoclingConversionResponse> GetResultAsync(string taskId)
     {
-        var response = await httpClient.GetAsync($"/v1/result/{taskId}");
-        response.EnsureSuccessStatusCode();
-
         var result = JsonConvert.DeserializeObject<DoclingConversionResponse>(
-            await response.Content.ReadAsStringAsync());
+            await apiClient.GetTaskResultJsonAsync(taskId));
 
         return result ?? throw new InvalidOperationException("No result in response");
+    }
+
+    private static OutputFormat MapOutputFormat(string outputFormat) => outputFormat switch
+    {
+        "json" => OutputFormat.Json,
+        "markdown" => OutputFormat.Md,
+        "html" => OutputFormat.Html,
+        "text" => OutputFormat.Text,
+        _ => throw new InvalidOperationException($"Unsupported output format: {outputFormat}")
+    };
+
+    private static ImageRefMode? MapImageExportMode(string? imageExportMode) => imageExportMode switch
+    {
+        null => null,
+        "placeholder" => ImageRefMode.Placeholder,
+        "embedded" => ImageRefMode.Embedded,
+        "referenced" => ImageRefMode.Referenced,
+        _ => throw new InvalidOperationException($"Unsupported image export mode: {imageExportMode}")
+    };
+
+    private static async Task<byte[]> CopyToByteArrayAsync(Stream input)
+    {
+        using var memoryStream = new MemoryStream();
+        await input.CopyToAsync(memoryStream);
+        return memoryStream.ToArray();
     }
 }

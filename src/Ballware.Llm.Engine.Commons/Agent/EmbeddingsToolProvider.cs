@@ -11,6 +11,7 @@ public class EmbeddingsToolProvider(
     IOriginRepository originRepository,
     IEmbeddingRepository embeddingRepository,
     IChunkRepository chunkRepository,
+    IImageRepository imageRepository,
     IAiModelBridge modelBridge) : IToolProvider
 {
     private const int DefaultTopK = 5;
@@ -64,9 +65,11 @@ public class EmbeddingsToolProvider(
 
         foreach (var origin in origins)
         {
-            var activeEmbeddings = (await embeddingRepository.GetActiveEmbeddingsForOrigin(tenantId, origin.Id)).Count();
+            var activeEmbeddingList = (await embeddingRepository.GetActiveEmbeddingsForOrigin(tenantId, origin.Id)).ToList();
+            var imageCount = (await imageRepository.GetByOriginAsync(tenantId, origin.Id)).Count();
+
             builder.AppendLine(
-                $"- Id: {origin.Id} | Name: {origin.Name} | Embeddings: {activeEmbeddings} | ContentType: {origin.ContentType}");
+                $"- Id: {origin.Id} | Name: {origin.Name} | Embeddings: {activeEmbeddingList.Count} | Images: {imageCount} | ContentType: {origin.ContentType}");
         }
 
         return builder.ToString().TrimEnd();
@@ -88,6 +91,7 @@ public class EmbeddingsToolProvider(
 
         var maxChars = Clamp(AsInt(args, "maxChars") ?? DefaultMaxContentChars, 1000, MaxContentChars);
         var searchTerm = AsString(args, "searchTerm");
+        var images = (await imageRepository.GetByOriginAsync(tenantId, origin.Id)).ToList();
 
         var builder = new StringBuilder();
         builder.AppendLine($"Origin: {origin.Name}");
@@ -111,10 +115,39 @@ public class EmbeddingsToolProvider(
                     builder.AppendLine($"- {snippet}");
                 }
             }
+
+            var imageSnippets = images
+                .Where(image =>
+                    image.Text.Contains(searchTerm, StringComparison.InvariantCultureIgnoreCase) ||
+                    image.Description.Contains(searchTerm, StringComparison.InvariantCultureIgnoreCase) ||
+                    image.Name.Contains(searchTerm, StringComparison.InvariantCultureIgnoreCase))
+                .Take(6)
+                .ToList();
+
+            if (imageSnippets.Count > 0)
+            {
+                builder.AppendLine();
+                builder.AppendLine($"Bildtreffer für '{searchTerm}':");
+                foreach (var image in imageSnippets)
+                {
+                    builder.AppendLine($"- ImageId: {image.Id} | Name: {image.Name} | {TrimToMax(image.Text, 220).Replace(Environment.NewLine, " ")}");
+                }
+            }
         }
         else
         {
             builder.AppendLine(TrimToMax(origin.Content ?? string.Empty, maxChars));
+
+            if (images.Count > 0)
+            {
+                builder.AppendLine();
+                builder.AppendLine("Extrahierte Bilder:");
+
+                foreach (var image in images.Take(20))
+                {
+                    builder.AppendLine($"- ImageId: {image.Id} | Name: {image.Name} | ContentType: {image.ContentType} | Beschreibung: {TrimToMax(image.Description, 180)}");
+                }
+            }
         }
 
         return builder.ToString().TrimEnd();

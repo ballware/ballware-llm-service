@@ -1,0 +1,26 @@
+{
+  "document": {
+    "title": "Artikel mit Struktur",
+    "sections": [
+      {
+        "heading": "Einleitung",
+        "text": "Beispielinhalt fuer die JSON-Ausgabe."
+      },
+      {
+        "heading": "Daten",
+        "items": [
+          "Punkt A",
+          "Punkt B"
+        ]
+      }
+    ],
+    "metadata": {
+      "language": "de",
+      "keywords": [
+        "docling",
+        "ingestion",
+        "testcontainers"
+      ]
+    }
+  }
+}

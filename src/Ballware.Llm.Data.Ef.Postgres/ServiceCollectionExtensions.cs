@@ -25,7 +25,7 @@ public static class ServiceCollectionExtensions
                 o.MigrationsAssembly(typeof(LlmDbContext).Assembly.FullName);
             });
 
-            o.ReplaceService<IModelCustomizer, LlmModelBaseCustomizer<Context, Origin, Embedding, Chunk>>();
+            o.ReplaceService<IModelCustomizer, LlmModelBaseCustomizer<Context, Origin, Embedding, Chunk, Image>>();
         });
 
         services.AddScoped<ILlmDbContext, LlmDbContext>();
@@ -41,6 +41,9 @@ public static class ServiceCollectionExtensions
         
         services.AddScoped<ITenantableRepository<Public.Chunk>, ChunkRepository>();
         services.AddScoped<IChunkRepository, ChunkRepository>();
+
+        services.AddScoped<ITenantableRepository<Public.Image>, ImageRepository>();
+        services.AddScoped<IImageRepository, ImageRepository>();
         
         services.AddHostedService<InitializationWorker>();
         

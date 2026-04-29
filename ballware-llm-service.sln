@@ -28,6 +28,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ballware.Llm.Engine", "src\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ballware.Llm.Engine.Commons", "src\Ballware.Llm.Engine.Commons\Ballware.Llm.Engine.Commons.csproj", "{3FB1A718-B6F7-444A-9903-4D754CD6D540}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ballware.Llm.Docling.Client", "src\Ballware.Llm.Docling.Client\Ballware.Llm.Docling.Client.csproj", "{F4B474D7-9571-49AD-8650-9E391B7C3C60}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ballware.Llm.Ingestion.Docling.Tests", "test\Ballware.Llm.Ingestion.Docling.Tests\Ballware.Llm.Ingestion.Docling.Tests.csproj", "{54861594-96DC-4B3C-98AA-D311D8152946}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -90,5 +94,13 @@ Global
 		{3FB1A718-B6F7-444A-9903-4D754CD6D540}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3FB1A718-B6F7-444A-9903-4D754CD6D540}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3FB1A718-B6F7-444A-9903-4D754CD6D540}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F4B474D7-9571-49AD-8650-9E391B7C3C60}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F4B474D7-9571-49AD-8650-9E391B7C3C60}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F4B474D7-9571-49AD-8650-9E391B7C3C60}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F4B474D7-9571-49AD-8650-9E391B7C3C60}.Release|Any CPU.Build.0 = Release|Any CPU
+		{54861594-96DC-4B3C-98AA-D311D8152946}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{54861594-96DC-4B3C-98AA-D311D8152946}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{54861594-96DC-4B3C-98AA-D311D8152946}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{54861594-96DC-4B3C-98AA-D311D8152946}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

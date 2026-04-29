@@ -44,6 +44,7 @@ public class EmbeddingBaseRepository(IMapper mapper, ILlmDbContext dbContext, IC
                 { "Id", chunk.Id }
             });
         }
+
     }
 
     public Task<IEnumerable<Embedding>> GetActiveEmbeddingsForOrigin(Guid tenantId, Guid originId)

@@ -15,6 +15,7 @@ COPY ./Ballware.Llm.Context ./Ballware.Llm.Context
 COPY ./Ballware.Llm.Data ./Ballware.Llm.Data
 COPY ./Ballware.Llm.Data.Ef ./Ballware.Llm.Data.Ef
 COPY ./Ballware.Llm.Data.Ef.Postgres ./Ballware.Llm.Data.Ef.Postgres
+COPY ./Ballware.Llm.Docling.Client ./Ballware.Llm.Docling.Client
 COPY ./Ballware.Llm.Embedding ./Ballware.Llm.Embedding
 COPY ./Ballware.Llm.Engine ./Ballware.Llm.Engine
 COPY ./Ballware.Llm.Engine.Commons ./Ballware.Llm.Engine.Commons

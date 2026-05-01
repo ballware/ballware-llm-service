@@ -6,61 +6,142 @@ using Microsoft.Extensions.Logging;
 
 namespace Ballware.Llm.Engine.Ollama.Internal;
 
-internal class AiChat(IChatClient chat, ChatOptions options, ILogger<AiChat> logger) : IAiChat
+internal class AiChat(
+    IChatClient chat,
+    ChatOptions options,
+    IReadOnlyList<AITool> availableTools,
+    int minToolsPerRequest,
+    int maxToolsPerRequest,
+    ILogger<AiChat> logger) : IAiChat
 {
     public async Task PromptAsync(string message, Action<string> tokenHandler)
     {
-        var sb = new StringBuilder();
+        var selectedTools = ToolSelector
+            .SelectTools(message, availableTools, minToolsPerRequest, maxToolsPerRequest)
+            .ToList();
 
-        try
+        var attemptToolCounts = BuildAttemptToolCounts(selectedTools.Count);
+        Exception? lastException = null;
+
+        for (var attemptIndex = 0; attemptIndex < attemptToolCounts.Count; attemptIndex++)
         {
-            var requestSnapshot = BuildRequestSnapshot(message, options);
+            var sb = new StringBuilder();
+            var attemptTools = selectedTools.Take(attemptToolCounts[attemptIndex]).ToList();
+            options.Tools = attemptTools;
 
-            logger.LogDebug(
-                "LLM request payload (estimated tokens total: {EstimatedTotalTokens}, instructions: {EstimatedInstructionsTokens}, prompt: {EstimatedPromptTokens}, tools: {EstimatedToolsTokens}, tools count: {ToolCount}): {RequestPayload}",
-                requestSnapshot.EstimatedTotalTokens,
-                requestSnapshot.EstimatedInstructionsTokens,
-                requestSnapshot.EstimatedPromptTokens,
-                requestSnapshot.EstimatedToolsTokens,
-                requestSnapshot.ToolCount,
-                requestSnapshot.Payload);
-
-            logger.LogDebug(
-                "LLM prompt (estimated tokens: {EstimatedPromptTokens}): {Prompt}",
-                EstimateTokenCount(message),
-                message);
-
-            await foreach (var response in chat.GetStreamingResponseAsync(message, options))
+            try
             {
-                sb.Append(response);
+                logger.LogDebug(
+                    "LLM tool selection (attempt {Attempt}/{Attempts}, selected {SelectedTools}/{AvailableTools}): {SelectedToolNames}",
+                    attemptIndex + 1,
+                    attemptToolCounts.Count,
+                    attemptTools.Count,
+                    availableTools.Count,
+                    string.Join(", ", attemptTools.Select(t => TryReadPropertyAsString(t, "Name") ?? t.GetType().Name)));
+
+                var requestSnapshot = BuildRequestSnapshot(message, options);
+
+                logger.LogDebug(
+                    "LLM request payload (estimated tokens total: {EstimatedTotalTokens}, instructions: {EstimatedInstructionsTokens}, prompt: {EstimatedPromptTokens}, tools: {EstimatedToolsTokens}, tools count: {ToolCount}): {RequestPayload}",
+                    requestSnapshot.EstimatedTotalTokens,
+                    requestSnapshot.EstimatedInstructionsTokens,
+                    requestSnapshot.EstimatedPromptTokens,
+                    requestSnapshot.EstimatedToolsTokens,
+                    requestSnapshot.ToolCount,
+                    requestSnapshot.Payload);
+
+                logger.LogDebug(
+                    "LLM prompt (estimated tokens: {EstimatedPromptTokens}): {Prompt}",
+                    EstimateTokenCount(message),
+                    message);
+
+                await foreach (var response in chat.GetStreamingResponseAsync(message, options))
+                {
+                    sb.Append(response);
+                }
+
+                var responseText = sb.ToString();
+
+                logger.LogDebug(
+                    "LLM response (estimated tokens: {EstimatedResponseTokens}): {Response}",
+                    EstimateTokenCount(responseText),
+                    responseText);
+
+                tokenHandler(responseText);
+                return;
             }
+            catch (ClientResultException ex) when (IsContextLengthError(ex) && attemptIndex < attemptToolCounts.Count - 1)
+            {
+                lastException = ex;
 
-            var responseText = sb.ToString();
+                logger.LogWarning(ex,
+                    "LLM request exceeded context window on attempt {Attempt}. Retrying with fewer tools ({CurrentTools} -> {NextTools}).",
+                    attemptIndex + 1,
+                    attemptTools.Count,
+                    attemptToolCounts[attemptIndex + 1]);
+            }
+            catch (ClientResultException ex)
+            {
+                logger.LogError(ex,
+                    "Ollama API returned HTTP {StatusCode}. Response body: {ResponseBody}",
+                    ex.Status, ex.Message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Unexpected error during streaming response from Ollama API");
+                throw;
+            }
+        }
 
-            logger.LogDebug(
-                "LLM response (estimated tokens: {EstimatedResponseTokens}): {Response}",
-                EstimateTokenCount(responseText),
-                responseText);
-
-            tokenHandler(responseText);
-        }
-        catch (ClientResultException ex)
-        {
-            logger.LogError(ex,
-                "Ollama API returned HTTP {StatusCode}. Response body: {ResponseBody}",
-                ex.Status, ex.Message);
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Unexpected error during streaming response from Ollama API");
-            throw;
-        }
+        throw lastException ?? new InvalidOperationException("LLM request failed unexpectedly.");
     }
 
     private static long EstimateTokenCount(string text)
     {
         return string.IsNullOrEmpty(text) ? 0 : (text.Length + 3L) / 4L;
+    }
+
+    private List<int> BuildAttemptToolCounts(int initialToolCount)
+    {
+        var attempts = new List<int>();
+        var current = Math.Max(0, initialToolCount);
+
+        attempts.Add(current);
+
+        while (current > 0 && attempts.Count < 4)
+        {
+            current = current <= minToolsPerRequest
+                ? 0
+                : Math.Max(minToolsPerRequest, current / 2);
+
+            if (attempts.Contains(current))
+            {
+                break;
+            }
+
+            attempts.Add(current);
+        }
+
+        if (!attempts.Contains(0))
+        {
+            attempts.Add(0);
+        }
+
+        return attempts;
+    }
+
+    private static bool IsContextLengthError(ClientResultException ex)
+    {
+        if (ex.Status is 400 or 413)
+        {
+            var message = ex.Message;
+            return message.Contains("maximum context length", StringComparison.InvariantCultureIgnoreCase) ||
+                   message.Contains("input_tokens", StringComparison.InvariantCultureIgnoreCase) ||
+                   message.Contains("context length", StringComparison.InvariantCultureIgnoreCase);
+        }
+
+        return false;
     }
 
     private static RequestSnapshot BuildRequestSnapshot(string message, ChatOptions options)

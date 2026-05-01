@@ -13,4 +13,10 @@ public class OllamaOptions
     
     [Required]
     public required string EmbeddingModel  { get; set; }
+
+    [Range(0, 128)]
+    public int MaxToolsPerRequest { get; set; } = 10;
+
+    [Range(0, 128)]
+    public int MinToolsPerRequest { get; set; } = 3;
 }

@@ -93,14 +93,23 @@ internal class AiModelBridge : IAiModelBridge
             }
         }
 
-        chatOptions.Tools = tools;
-
         if (!string.IsNullOrEmpty(options.SystemPrompt))
         {
             chatOptions.Instructions = options.SystemPrompt;
         }
-        
-        return new AiChat(chat, chatOptions, LoggerFactory.CreateLogger<AiChat>());
+
+        var compactedTools = tools
+            .Select(ToolSchemaCompactingTool.Create)
+            .Cast<AITool>()
+            .ToList();
+
+        return new AiChat(
+            chat,
+            chatOptions,
+            compactedTools,
+            Options.MinToolsPerRequest,
+            Options.MaxToolsPerRequest,
+            LoggerFactory.CreateLogger<AiChat>());
     }
 
     public async Task<float[]> EmbedAsync(string chunk, string? model)

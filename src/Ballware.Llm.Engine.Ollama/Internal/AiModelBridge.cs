@@ -1,6 +1,7 @@
 using Ballware.Llm.Engine.Ollama.Configuration;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
 using OpenAI;
 using OpenAI.Chat;
@@ -17,11 +18,13 @@ internal class AiModelBridge : IAiModelBridge
     private AiToolRegistry ToolRegistry { get; }
     private IChatClient InferenceApiClient { get; }
     private IEmbeddingGenerator<string, Embedding<float>> EmbeddingApiClient { get; }
+    private ILoggerFactory LoggerFactory { get; }
     
-    public AiModelBridge(OllamaOptions options, AiToolRegistry toolRegistry)
+    public AiModelBridge(OllamaOptions options, AiToolRegistry toolRegistry, ILoggerFactory loggerFactory)
     {
         Options = options;
         ToolRegistry = toolRegistry;
+        LoggerFactory = loggerFactory;
 
         var clientOptions = new OpenAIClientOptions()
         {
@@ -97,7 +100,7 @@ internal class AiModelBridge : IAiModelBridge
             chatOptions.Instructions = options.SystemPrompt;
         }
         
-        return new AiChat(chat, chatOptions);
+        return new AiChat(chat, chatOptions, LoggerFactory.CreateLogger<AiChat>());
     }
 
     public async Task<float[]> EmbedAsync(string chunk, string? model)

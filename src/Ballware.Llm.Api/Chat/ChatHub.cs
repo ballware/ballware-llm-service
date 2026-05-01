@@ -1,16 +1,16 @@
 using Ballware.Llm.Context;
-using Ballware.Llm.Metadata;
 using Ballware.Llm.Engine.Ollama;
 using Ballware.Shared.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Ballware.Llm.Api.Chat;
 
 [Authorize]
-public class ChatHub(IServiceProvider serviceProvider, IPrincipalUtils principalUtils, ChatSessionStore sessionStore) : Hub
+public class ChatHub(IServiceProvider serviceProvider, IPrincipalUtils principalUtils, ChatSessionStore sessionStore, ILogger<ChatHub> logger) : Hub
 {
     public override async Task OnConnectedAsync()
     {
@@ -57,15 +57,24 @@ public class ChatHub(IServiceProvider serviceProvider, IPrincipalUtils principal
     {
         var session = sessionStore.Get(Context.ConnectionId);
 
-        if (session.Chat == null)
+        try
         {
-            var scope = serviceProvider.CreateScope();
-            var ollamaModelBridge = scope.ServiceProvider.GetRequiredService<IAiModelBridge>();
-            var modelContextProvider = scope.ServiceProvider.GetRequiredService<IModelContextProvider>();
-            
-            await session.StartChatAsync(scope.ServiceProvider, ollamaModelBridge, modelContextProvider, message);
+            if (session.Chat == null)
+            {
+                var scope = serviceProvider.CreateScope();
+                var ollamaModelBridge = scope.ServiceProvider.GetRequiredService<IAiModelBridge>();
+                var modelContextProvider = scope.ServiceProvider.GetRequiredService<IModelContextProvider>();
+
+                await session.StartChatAsync(scope.ServiceProvider, ollamaModelBridge, modelContextProvider, message);
+            }
+
+            await session.Chat!.PromptAsync(message, (token) => Clients.Caller.SendAsync("Response", token));
         }
-        
-        await session.Chat.PromptAsync(message, (token) => Clients.Caller.SendAsync("Response", token));
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error processing prompt for connection {ConnectionId}. Message: {Message}", Context.ConnectionId, message);
+            await Clients.Caller.SendAsync("Error", $"Fehler beim Verarbeiten der Anfrage: {ex.Message}");
+            throw;
+        }
     }
 }

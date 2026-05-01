@@ -1,6 +1,5 @@
 using System.ClientModel;
 using System.Text;
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 
@@ -8,22 +7,30 @@ namespace Ballware.Llm.Engine.Ollama.Internal;
 
 internal class AiChat(IChatClient chat, ChatOptions options, ILogger<AiChat> logger) : IAiChat
 {
-    // Einige Modelle liefern bei Streaming internisierte Thinking-/BPE-Artefakte.
-    private static readonly Regex ThinkBlockRegex = new("<think>[\\s\\S]*?</think>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-    private static readonly Regex ThinkCloseRegex = new("</think>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
     public async Task PromptAsync(string message, Action<string> tokenHandler)
     {
         var sb = new StringBuilder();
 
         try
         {
+            logger.LogDebug(
+                "LLM prompt (estimated tokens: {EstimatedPromptTokens}): {Prompt}",
+                EstimateTokenCount(message),
+                message);
+
             await foreach (var response in chat.GetStreamingResponseAsync(message, options))
             {
                 sb.Append(response);
             }
 
-            tokenHandler(sb.ToString());
+            var responseText = sb.ToString();
+
+            logger.LogDebug(
+                "LLM response (estimated tokens: {EstimatedResponseTokens}): {Response}",
+                EstimateTokenCount(responseText),
+                responseText);
+
+            tokenHandler(responseText);
         }
         catch (ClientResultException ex)
         {
@@ -37,5 +44,10 @@ internal class AiChat(IChatClient chat, ChatOptions options, ILogger<AiChat> log
             logger.LogError(ex, "Unexpected error during streaming response from Ollama API");
             throw;
         }
+    }
+
+    private static long EstimateTokenCount(string text)
+    {
+        return string.IsNullOrEmpty(text) ? 0 : (text.Length + 3L) / 4L;
     }
 }

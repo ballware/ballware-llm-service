@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="120" viewBox="0 0 240 120">
+  <rect width="240" height="120" fill="#ffffff" />
+  <rect x="20" y="25" width="45" height="70" fill="#1f77b4" />
+  <rect x="90" y="40" width="45" height="55" fill="#2ca02c" />
+  <rect x="160" y="15" width="45" height="80" fill="#ff7f0e" />
+  <text x="20" y="110" font-family="Arial, sans-serif" font-size="12">Q1 Testgrafik</text>
+</svg>

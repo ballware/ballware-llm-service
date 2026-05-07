@@ -1,7 +1,6 @@
 using System.Collections.Immutable;
 using Ballware.Llm.Data.Repository;
 using Ballware.Llm.Embedding;
-using Ballware.Llm.Engine.Ollama;
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
 
@@ -14,7 +13,7 @@ public class OriginCreateEmbeddingJob(
     IChunkRepository chunkRepository,
     IImageRepository imageRepository,
     ChunkerRegistry chunkerRegistry,
-    IAiModelBridge modelBridge) : IJob
+    IEmbeddingEngine embeddingEngine) : IJob
 {
     public static readonly JobKey Key = new JobKey("createembedding", "origin");
 
@@ -75,7 +74,7 @@ public class OriginCreateEmbeddingJob(
         
         foreach (var c in chunks)
         {
-            var chunkEmbedding = await modelBridge.EmbedAsync(c.Text, model);
+            var chunkEmbedding = await embeddingEngine.GetEmbeddingAsync(c.Text, model);
             
             var chunk = new Data.Public.Chunk()
             {
@@ -93,7 +92,7 @@ public class OriginCreateEmbeddingJob(
         foreach (var image in images.Where(image => !string.IsNullOrWhiteSpace(image.Text)))
         {
             var chunkText = BuildImageChunkText(image);
-            var imageChunkEmbedding = await modelBridge.EmbedAsync(chunkText, model);
+            var imageChunkEmbedding = await embeddingEngine.GetEmbeddingAsync(chunkText, model);
 
             var imageChunk = new Data.Public.Chunk()
             {

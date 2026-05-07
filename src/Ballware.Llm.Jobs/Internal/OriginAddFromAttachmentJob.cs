@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using Ballware.Llm.Data.Public;
 using Ballware.Llm.Data.Repository;
-using Ballware.Llm.Engine.Ollama;
+using Ballware.Llm.Embedding;
 using Ballware.Llm.Ingestion;
 using Quartz;
 
@@ -11,7 +11,7 @@ public class OriginAddFromAttachmentJob(
     IJobFileStorageAdapter storageAdapter,
     IOriginRepository originRepository,
     IImageRepository imageRepository,
-    IAiModelBridge modelBridge,
+    IEmbeddingEngine embeddingEngine,
     IKnowledgeIngestor ingestor) : IJob
 {
     public static readonly JobKey Key = new JobKey("addfromattachment", "origin");
@@ -64,7 +64,7 @@ public class OriginAddFromAttachmentJob(
             foreach (var extractedImage in ingestionResult.Images.Where(image => image.Payload.Length > 0))
             {
                 var embeddingText = BuildEmbeddingText(extractedImage, origin.Name);
-                var imageEmbedding = await modelBridge.EmbedAsync(embeddingText, null);
+                var imageEmbedding = await embeddingEngine.GetEmbeddingAsync(embeddingText, null);
 
                 var image = new Data.Public.Image()
                 {

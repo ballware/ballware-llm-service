@@ -4,9 +4,9 @@ namespace Ballware.Llm.Embedding;
 
 public class ChunkerRegistry
 {
-    private Dictionary<string, Type> _chunkers = new();
+    private readonly Dictionary<string, Type> _chunkers = new();
     
-    internal void AddChunker(string contentType, Type chunkerType)
+    public void AddChunker(string contentType, Type chunkerType)
     {
         _chunkers.Add(contentType, chunkerType);
         

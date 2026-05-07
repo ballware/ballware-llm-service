@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using Ballware.Llm.Engine.Agent;
+using Ballware.Llm.Tools;
 
 namespace Ballware.Llm.Service.Configuration;
 

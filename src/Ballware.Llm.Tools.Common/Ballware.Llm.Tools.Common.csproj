@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Ballware.Llm.Data\Ballware.Llm.Data.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Tools\Ballware.Llm.Tools.csproj" />
+    </ItemGroup>
+
+</Project>

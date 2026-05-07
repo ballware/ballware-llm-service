@@ -54,11 +54,15 @@
       <ProjectReference Include="..\Ballware.Llm.Data.Ef.Postgres\Ballware.Llm.Data.Ef.Postgres.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Data.Ef\Ballware.Llm.Data.Ef.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Data\Ballware.Llm.Data.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Embedding.OpenAi\Ballware.Llm.Embedding.OpenAi.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Embedding.SemanticKernel\Ballware.Llm.Embedding.SemanticKernel.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Embedding\Ballware.Llm.Embedding.csproj" />
-      <ProjectReference Include="..\Ballware.Llm.Engine.Commons\Ballware.Llm.Engine.Commons.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Inference.OpenAi\Ballware.Llm.Inference.OpenAi.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Ingestion.Docling\Ballware.Llm.Ingestion.Docling.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Jobs\Ballware.Llm.Jobs.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Metadata\Ballware.Llm.Metadata.csproj" />
-      <ProjectReference Include="..\Ballware.Llm.Engine.Ollama\Ballware.Llm.Engine.Ollama.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Tools.Common\Ballware.Llm.Tools.Common.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Tools.Embedding\Ballware.Llm.Tools.Embedding.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Tools\Ballware.Llm.Tools.csproj" />
     </ItemGroup>
 </Project>

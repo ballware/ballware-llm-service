@@ -8,16 +8,20 @@ using Ballware.Llm.Data.Ef.Postgres;
 using Ballware.Llm.Docling.Client;
 using Ballware.Llm.Embedding;
 using Ballware.Llm.Embedding.Configuration;
-using Ballware.Llm.Engine.Commons;
+using Ballware.Llm.Embedding.OpenAi;
+using Ballware.Llm.Embedding.OpenAi.Configuration;
+using Ballware.Llm.Embedding.SemanticKernel;
+using Ballware.Llm.Inference.OpenAi;
+using Ballware.Llm.Inference.OpenAi.Configuration;
 using Ballware.Llm.Ingestion.Docling;
 using Ballware.Llm.Ingestion.Docling.Configuration;
 using Ballware.Llm.Jobs;
-using Ballware.Llm.Engine.Ollama;
-using Ballware.Llm.Engine.Ollama.Configuration;
 using Ballware.Llm.Service.Adapter;
 using Ballware.Llm.Service.Configuration;
 using Ballware.Llm.Service.Extensions;
 using Ballware.Llm.Service.Mappings;
+using Ballware.Llm.Tools.Common;
+using Ballware.Llm.Tools.Embedding;
 using Ballware.Meta.Service.Client;
 using Ballware.Shared.Api;
 using Ballware.Storage.Service.Client;
@@ -63,8 +67,9 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         SwaggerOptions? swaggerOptions = Configuration.GetSection("Swagger").Get<SwaggerOptions>();
         LlmStorageOptions? llmStorageOptions = Configuration.GetSection("Llm").Get<LlmStorageOptions>();
         ContextOptions? contextOptions = Configuration.GetSection("Context").Get<ContextOptions>();
-        EmbeddingOptions? embeddingOptions = Configuration.GetSection("Embedding").Get<EmbeddingOptions>();
-        OllamaOptions? ollamaOptions = Configuration.GetSection("Ollama").Get<OllamaOptions>();
+        ChunkingOptions? chunkingOptions = Configuration.GetSection("Chunking").Get<ChunkingOptions>();
+        OpenAiInferenceOptions? inferenceOptions = Configuration.GetSection("Inference").Get<OpenAiInferenceOptions>();
+        OpenAiEmbeddingOptions? embeddingOptions = Configuration.GetSection("Embedding").Get<OpenAiEmbeddingOptions>();
         DoclingOptions? doclingOptions = Configuration.GetSection("Docling").Get<DoclingOptions>();
         McpOptions? mcpAgentOptions = Configuration.GetSection("Mcp").Get<McpOptions>();
         ServiceCredentialOptions? serviceCredentialOptions = Configuration.GetSection("ServiceCredentials").Get<ServiceCredentialOptions>(); 
@@ -89,12 +94,16 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
             .Bind(Configuration.GetSection("Context"))
             .ValidateDataAnnotations();
         
-        Services.AddOptionsWithValidateOnStart<EmbeddingOptions>()
-            .Bind(Configuration.GetSection("Embedding"))
+        Services.AddOptionsWithValidateOnStart<ChunkingOptions>()
+            .Bind(Configuration.GetSection("Chunking"))
             .ValidateDataAnnotations();
         
-        Services.AddOptionsWithValidateOnStart<OllamaOptions>()
-            .Bind(Configuration.GetSection("Ollama"))
+        Services.AddOptionsWithValidateOnStart<OpenAiInferenceOptions>()
+            .Bind(Configuration.GetSection("Inference"))
+            .ValidateDataAnnotations();
+        
+        Services.AddOptionsWithValidateOnStart<OpenAiEmbeddingOptions>()
+            .Bind(Configuration.GetSection("Embedding"))
             .ValidateDataAnnotations();
         
         Services.AddOptionsWithValidateOnStart<DoclingOptions>()
@@ -128,14 +137,19 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
             contextOptions = new ContextOptions();
         }
 
-        if (embeddingOptions == null)
+        if (chunkingOptions == null)
         {
-            embeddingOptions = new EmbeddingOptions();
+            chunkingOptions = new ChunkingOptions();
         }
         
-        if (ollamaOptions == null)
+        if (inferenceOptions == null)
         {
-            throw new ConfigurationException("Required configuration for ollama is missing");
+            throw new ConfigurationException("Required configuration for inference is missing");
+        }
+        
+        if (embeddingOptions == null)
+        {
+            throw new ConfigurationException("Required configuration for embedding is missing");
         }
 
         if (doclingOptions == null)
@@ -359,10 +373,15 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
 
         Services.AddBallwareLlmApiDependencies();
         Services.AddBallwareLlmContext(contextOptions);
-        Services.AddBallwareLlmEngineCommons();
-        Services.AddBallwareOllamaEngine(ollamaOptions, (serviceProvider, toolRegistry) =>
+        Services.AddBallwareEmbeddingOpenAi(embeddingOptions);
+
+        Services.AddBallwareLlmCommonTools();
+        Services.AddBallwareLlmEmbeddingTools();
+        
+        Services.AddBallwareInferenceEngineForOpenAi(inferenceOptions, (serviceProvider, toolRegistry) =>
         {
             toolRegistry.RegisterBallwareLlmCommonTools(serviceProvider);
+            toolRegistry.RegisterBallwareLlmToolsForEmbeddings();
             
             foreach (var mcpClientOptions in mcpAgentOptions.Agents)
             {
@@ -370,8 +389,14 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
             }
         });
         
+        
         Services.AddBallwareIngestionForDocling(doclingOptions);
-        Services.AddBallwareEmbeddingChunker(embeddingOptions);
+        
+        Services.AddBallwareSemanticKernelChunker();
+        Services.AddBallwareEmbeddingChunker(chunkingOptions, (chunkerRegistry) =>
+        {
+            chunkerRegistry.RegisterSemanticKernelChunker();
+        });
         
         Services.AddEndpointsApiExplorer();
         

@@ -1,5 +1,5 @@
 using Ballware.Llm.Context;
-using Ballware.Llm.Engine.Ollama;
+using Ballware.Llm.Inference;
 using Ballware.Shared.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -62,10 +62,10 @@ public class ChatHub(IServiceProvider serviceProvider, IPrincipalUtils principal
             if (session.Chat == null)
             {
                 var scope = serviceProvider.CreateScope();
-                var ollamaModelBridge = scope.ServiceProvider.GetRequiredService<IAiModelBridge>();
+                var inferenceEngine = scope.ServiceProvider.GetRequiredService<IInferenceEngine>();
                 var modelContextProvider = scope.ServiceProvider.GetRequiredService<IModelContextProvider>();
 
-                await session.StartChatAsync(scope.ServiceProvider, ollamaModelBridge, modelContextProvider, message);
+                await session.StartChatAsync(scope.ServiceProvider, inferenceEngine, modelContextProvider, message);
             }
 
             await session.Chat!.PromptAsync(message, (token) => Clients.Caller.SendAsync("Response", token));

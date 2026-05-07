@@ -1,5 +1,5 @@
 using Ballware.Llm.Context;
-using Ballware.Llm.Engine.Ollama;
+using Ballware.Llm.Inference;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -9,9 +9,9 @@ public class ChatSession(string connectionId, string contextIdentifier, Guid ten
 {
     public string ConnectionId { get; } = connectionId;
     
-    public IAiChat? Chat { get; private set; }
+    public IChatSession? Chat { get; private set; }
     
-    public async Task StartChatAsync(IServiceProvider serviceProvider, IAiModelBridge modelBridge, IModelContextProvider modelContextProvider, string initialPrompt)
+    public async Task StartChatAsync(IServiceProvider serviceProvider, IInferenceEngine inferenceEngine, IModelContextProvider modelContextProvider, string initialPrompt)
     {
         var logger = serviceProvider.GetService<ILogger<ChatSession>>();
         var options = await modelContextProvider.ProvideOptionsAsync(tenantId, contextIdentifier);
@@ -22,7 +22,7 @@ public class ChatSession(string connectionId, string contextIdentifier, Guid ten
             EstimateTokenCount(systemPrompt),
             systemPrompt);
         
-        Chat = await modelBridge.StartChatAsync(serviceProvider, new AiChatOptions()
+        Chat = await inferenceEngine.StartChatAsync(serviceProvider, new ChatContextOptions()
         {
             Model = options.Model,
             NumCtx = options.NumCtx,

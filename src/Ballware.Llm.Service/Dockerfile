@@ -17,14 +17,18 @@ COPY ./Ballware.Llm.Data.Ef ./Ballware.Llm.Data.Ef
 COPY ./Ballware.Llm.Data.Ef.Postgres ./Ballware.Llm.Data.Ef.Postgres
 COPY ./Ballware.Llm.Docling.Client ./Ballware.Llm.Docling.Client
 COPY ./Ballware.Llm.Embedding ./Ballware.Llm.Embedding
-COPY ./Ballware.Llm.Engine ./Ballware.Llm.Engine
-COPY ./Ballware.Llm.Engine.Commons ./Ballware.Llm.Engine.Commons
-COPY ./Ballware.Llm.Engine.Ollama ./Ballware.Llm.Engine.Ollama
+COPY ./Ballware.Llm.Embedding.OpenAi ./Ballware.Llm.Embedding.OpenAi
+COPY ./Ballware.Llm.Embedding.SemanticKernel ./Ballware.Llm.Embedding.SemanticKernel
+COPY ./Ballware.Llm.Inference ./Ballware.Llm.Inference
+COPY ./Ballware.Llm.Inference.OpenAi ./Ballware.Llm.Inference.OpenAi
 COPY ./Ballware.Llm.Ingestion ./Ballware.Llm.Ingestion
 COPY ./Ballware.Llm.Ingestion.Docling ./Ballware.Llm.Ingestion.Docling
 COPY ./Ballware.Llm.Jobs ./Ballware.Llm.Jobs
 COPY ./Ballware.Llm.Metadata ./Ballware.Llm.Metadata
 COPY ./Ballware.Llm.Service ./Ballware.Llm.Service
+COPY ./Ballware.Llm.Tools ./Ballware.Llm.Tools
+COPY ./Ballware.Llm.Tools.Common ./Ballware.Llm.Tools.Common
+COPY ./Ballware.Llm.Tools.Embedding ./Ballware.Llm.Tools.Embedding
 
 WORKDIR "/src/Ballware.Llm.Service"
 RUN dotnet nuget add source "https://nuget.pkg.github.com/ballware/index.json" --name github --username "$GITHUB_USERNAME" --password "$GITHUB_PAT" --store-password-in-clear-text

@@ -1,11 +1,11 @@
 using Ballware.Llm.Context.Configuration;
 using Ballware.Llm.Data.Repository;
-using Ballware.Llm.Engine.Ollama;
+using Ballware.Llm.Embedding;
 using SmartFormat;
 
 namespace Ballware.Llm.Context.Internal;
 
-internal class ModelContextProvider(ContextOptions options, IAiModelBridge modelBridge, IContextRepository contextRepository, IOriginRepository originRepository, IEmbeddingRepository embeddingRepository, IChunkRepository chunkRepository) : IModelContextProvider
+internal class ModelContextProvider(ContextOptions options, IEmbeddingEngine embeddingEngine, IContextRepository contextRepository, IOriginRepository originRepository, IEmbeddingRepository embeddingRepository, IChunkRepository chunkRepository) : IModelContextProvider
 {
     public async Task<string> ProvideWelcomeMessageAsync(Guid tenantId, string contextIdentifier)
     {
@@ -36,7 +36,7 @@ internal class ModelContextProvider(ContextOptions options, IAiModelBridge model
                     
                     foreach (var embedding in activeEmbeddings)
                     {
-                        var initialPromptVector = await modelBridge.EmbedAsync(initialPrompt, embedding.Model);
+                        var initialPromptVector = await embeddingEngine.GetEmbeddingAsync(initialPrompt, embedding.Model);
                         
                         var topChunks = await chunkRepository.FetchTopKSimilarChunksAsync(tenantId, embedding.Id, initialPromptVector, embedding.TopK ?? options.DefaultTopK);
 

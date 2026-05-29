@@ -11,6 +11,10 @@ internal class DefaultToolRegistry : IToolRegistry
     private readonly List<IToolProvider> _staticProviders = [];
     private readonly List<Type> _dynamicProviders = [];
 
+    public IReadOnlyList<IToolProvider> StaticToolProviders => _staticProviders;
+    public IReadOnlyList<Type> ScopedToolProviderTypes => _dynamicProviders;
+    public IReadOnlyList<IMcpService> McpServices => _services;
+
     public void RegisterStaticToolProvider(IToolProvider toolProvider)
     {
         _staticProviders.Add(toolProvider);
@@ -26,11 +30,11 @@ internal class DefaultToolRegistry : IToolRegistry
         _services.Add(mcpService);
     }
 
-    internal IEnumerable<IMcpService> GetMcpServices() => _services;
+    internal IEnumerable<IMcpService> GetMcpServices() => McpServices;
     
     internal IEnumerable<AITool> GetToolsForUser(IServiceProvider scopeServiceProvider, Guid tenantId, Guid userId, IDictionary<string, object> claims)
     {
-        var tools = _staticProviders
+        var tools = StaticToolProviders
             .SelectMany(p => p.GetToolsForUser(tenantId, userId, claims).Select(t => new AiCallbackTool(
                 t.Name,
                 t.Description,
@@ -38,7 +42,7 @@ internal class DefaultToolRegistry : IToolRegistry
                 async args => await t.Executor(args ?? ImmutableDictionary<string, object?>.Empty))))
             .ToList();
         
-        tools.AddRange(_dynamicProviders.SelectMany(p =>
+        tools.AddRange(ScopedToolProviderTypes.SelectMany(p =>
         {
             var provider = (IToolProvider)scopeServiceProvider.GetRequiredService(p);
             

@@ -50,6 +50,9 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Ballware.Assistant.Workflow.MsAgentNetwork\Ballware.Assistant.Workflow.MsAgentNetwork.csproj" />
+      <ProjectReference Include="..\Ballware.Assistant.Workflow\Ballware.Assistant.Workflow.csproj" />
+      <ProjectReference Include="..\Ballware.Assistant\Ballware.Assistant.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Api\Ballware.Llm.Api.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Data.Ef.Postgres\Ballware.Llm.Data.Ef.Postgres.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Data.Ef\Ballware.Llm.Data.Ef.csproj" />

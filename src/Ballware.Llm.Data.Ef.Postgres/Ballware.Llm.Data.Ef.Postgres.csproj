@@ -27,4 +27,8 @@
         <ProjectReference Include="..\Ballware.Llm.Data.Ef\Ballware.Llm.Data.Ef.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Compile Remove="Migrations\20260512051513_AddAssistantOptionsToContext.cs" />
+    </ItemGroup>
+
 </Project>

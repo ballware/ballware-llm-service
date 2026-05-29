@@ -1,4 +1,5 @@
 using Ballware.Llm.Api;
+using Ballware.Assistant.Workflow.MsAgentNetwork;
 using Ballware.Llm.Api.Endpoints;
 using Ballware.Llm.Context;
 using Ballware.Llm.Context.Configuration;
@@ -72,6 +73,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         OpenAiEmbeddingOptions? embeddingOptions = Configuration.GetSection("Embedding").Get<OpenAiEmbeddingOptions>();
         DoclingOptions? doclingOptions = Configuration.GetSection("Docling").Get<DoclingOptions>();
         McpOptions? mcpAgentOptions = Configuration.GetSection("Mcp").Get<McpOptions>();
+        AssistantContextDefaultsOptions? assistantContextDefaultsOptions = Configuration.GetSection("AssistantDefaults").Get<AssistantContextDefaultsOptions>();
         ServiceCredentialOptions? serviceCredentialOptions = Configuration.GetSection("ServiceCredentials").Get<ServiceCredentialOptions>(); 
         ServiceClientOptions? storageClientOptions = Configuration.GetSection("StorageClient").Get<ServiceClientOptions>();
         ServiceClientOptions? metaClientOptions = Configuration.GetSection("MetaClient").Get<ServiceClientOptions>();
@@ -160,6 +162,11 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         if (mcpAgentOptions == null)
         {
             mcpAgentOptions = new McpOptions();
+        }
+
+        if (assistantContextDefaultsOptions == null)
+        {
+            assistantContextDefaultsOptions = new AssistantContextDefaultsOptions();
         }
 
         if (serviceCredentialOptions == null)
@@ -342,6 +349,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         Services.AddScoped<IMapper, ServiceMapper>();
         
         Services.AddHttpContextAccessor();
+        Services.AddSingleton(assistantContextDefaultsOptions);
 
         Services.AddMvcCore()
             .AddApiExplorer();
@@ -368,6 +376,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         Services.AddScoped<IExportMetadataProvider, MetaServiceMetadataAdapter>();
         Services.AddScoped<IFileStorageProvider, StorageServiceFileStorageAdapter>();
         Services.AddScoped<IJobFileStorageAdapter, StorageServiceFileStorageAdapter>();
+        Services.AddScoped<ITenantableRepositoryHook<Data.Public.Context, Data.Persistables.Context>, ContextDefaultsRepositoryHook>();
         Services.AddScoped<ITenantableRepositoryHook<Data.Public.Origin, Data.Persistables.Origin>, OriginPayloadRepositoryHook>();
         Services.AddScoped<ITenantableRepositoryHook<Data.Public.Image, Data.Persistables.Image>, ImagePayloadRepositoryHook>();
 
@@ -387,6 +396,14 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
             {
                 toolRegistry.RegisterMcpService(new McpService($"mcp.{mcpClientOptions.Namespace}", mcpClientOptions.UserTokenDelegation));
             }
+        });
+
+        Services.AddBallwareAssistantWorkflowForMsAgentNetwork(options =>
+        {
+            options.InternetMcpServiceIdentifiers = mcpAgentOptions.Agents
+                .Where(agent => agent.InternetResearch)
+                .Select(agent => $"mcp.{agent.Namespace}")
+                .ToList();
         });
         
         

@@ -1,5 +1,5 @@
+using Ballware.Assistant;
 using Ballware.Llm.Context;
-using Ballware.Llm.Inference;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -9,9 +9,9 @@ public class ChatSession(string connectionId, string contextIdentifier, Guid ten
 {
     public string ConnectionId { get; } = connectionId;
     
-    public IChatSession? Chat { get; private set; }
+    public IAssistantSession? Chat { get; private set; }
     
-    public async Task StartChatAsync(IServiceProvider serviceProvider, IInferenceEngine inferenceEngine, IModelContextProvider modelContextProvider, string initialPrompt)
+    public async Task StartChatAsync(IServiceProvider serviceProvider, IAssistantSessionFactory assistantSessionFactory, IModelContextProvider modelContextProvider, string initialPrompt)
     {
         var logger = serviceProvider.GetService<ILogger<ChatSession>>();
         var options = await modelContextProvider.ProvideOptionsAsync(tenantId, contextIdentifier);
@@ -22,12 +22,17 @@ public class ChatSession(string connectionId, string contextIdentifier, Guid ten
             EstimateTokenCount(systemPrompt),
             systemPrompt);
         
-        Chat = await inferenceEngine.StartChatAsync(serviceProvider, new ChatContextOptions()
+        Chat = await assistantSessionFactory.StartSessionAsync(new AssistantSessionStartOptions
         {
+            TenantId = tenantId,
+            UserId = userId,
+            Claims = claims,
+            UserAccessToken = userAccessToken,
             Model = options.Model,
             NumCtx = options.NumCtx,
-            SystemPrompt = systemPrompt
-        }, tenantId, userId, claims, userAccessToken);
+            SystemPrompt = systemPrompt,
+            Stages = options.AssistantStages
+        });
     }
 
     private static long EstimateTokenCount(string text)

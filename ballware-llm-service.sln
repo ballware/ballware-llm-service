@@ -40,6 +40,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ballware.Llm.Embedding.Open
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ballware.Llm.Embedding.SemanticKernel", "src\Ballware.Llm.Embedding.SemanticKernel\Ballware.Llm.Embedding.SemanticKernel.csproj", "{4E786195-41DB-4F25-84BD-4404789B83E8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ballware.Assistant.Workflow", "src\Ballware.Assistant.Workflow\Ballware.Assistant.Workflow.csproj", "{335283F9-695A-4A78-B58F-3B3B2F880373}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ballware.Assistant.Workflow.MsAgentNetwork", "src\Ballware.Assistant.Workflow.MsAgentNetwork\Ballware.Assistant.Workflow.MsAgentNetwork.csproj", "{DCF6691E-FA1E-4236-9BCA-3322A20F3F38}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ballware.Assistant", "src\Ballware.Assistant\Ballware.Assistant.csproj", "{EE93C471-915B-4247-8AF7-C0DF684CCB4B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -126,5 +132,17 @@ Global
 		{4E786195-41DB-4F25-84BD-4404789B83E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4E786195-41DB-4F25-84BD-4404789B83E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4E786195-41DB-4F25-84BD-4404789B83E8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{335283F9-695A-4A78-B58F-3B3B2F880373}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{335283F9-695A-4A78-B58F-3B3B2F880373}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{335283F9-695A-4A78-B58F-3B3B2F880373}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{335283F9-695A-4A78-B58F-3B3B2F880373}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DCF6691E-FA1E-4236-9BCA-3322A20F3F38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DCF6691E-FA1E-4236-9BCA-3322A20F3F38}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DCF6691E-FA1E-4236-9BCA-3322A20F3F38}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DCF6691E-FA1E-4236-9BCA-3322A20F3F38}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EE93C471-915B-4247-8AF7-C0DF684CCB4B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE93C471-915B-4247-8AF7-C0DF684CCB4B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EE93C471-915B-4247-8AF7-C0DF684CCB4B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EE93C471-915B-4247-8AF7-C0DF684CCB4B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -38,7 +38,10 @@ public class Context : IEntity, ITenantable, IAuditable
     
     [Column("welcome_message")]
     public string? WelcomeMessage { get; set; }
-    
+
+    [Column("assistant_stages_json")]
+    public string? AssistantStagesJson { get; set; }
+
     [Column("num_ctx")]
     public int? NumCtx { get; set; }
     

@@ -19,6 +19,7 @@
     </ItemGroup>
     
     <ItemGroup>
+      <ProjectReference Include="..\Ballware.Assistant\Ballware.Assistant.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Context\Ballware.Llm.Context.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Data\Ballware.Llm.Data.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Inference\Ballware.Llm.Inference.csproj" />

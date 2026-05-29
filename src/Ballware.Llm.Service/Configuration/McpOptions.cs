@@ -19,6 +19,8 @@ public class McpAgentOptions
     
     public bool UserTokenDelegation { get; set; } = false;
     
+    public bool InternetResearch { get; set; } = false;
+
     public string? CredentialIdentifier { get; set; }
 }
 

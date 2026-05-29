@@ -90,6 +90,10 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<string>("AssistantStagesJson")
+                        .HasColumnType("text")
+                        .HasColumnName("assistant_stages_json");
+
                     b.Property<DateTime?>("CreateStamp")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("create_stamp");

@@ -11,6 +11,10 @@ public class Context : IEditable
     public string? SystemPromptTemplate { get; set; }
     public string? WelcomeMessage { get; set; }
     
+    public bool Seed { get; set; }
+
+    public string? AssistantStagesJson { get; set; }
+
     public int? NumCtx { get; set; }
     
     public string? Model { get; set; }

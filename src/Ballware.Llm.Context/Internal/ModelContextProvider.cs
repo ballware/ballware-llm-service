@@ -1,6 +1,8 @@
 using Ballware.Llm.Context.Configuration;
 using Ballware.Llm.Data.Repository;
 using Ballware.Llm.Embedding;
+using System.Text.Json;
+using Ballware.Assistant.Workflow;
 using SmartFormat;
 
 namespace Ballware.Llm.Context.Internal;
@@ -76,10 +78,21 @@ internal class ModelContextProvider(ContextOptions options, IEmbeddingEngine emb
             return new ModelContextOptions()
             {
                 Model = context.Model,
-                NumCtx = context.NumCtx
+                NumCtx = context.NumCtx,
+                AssistantStages = ParseStages(context.AssistantStagesJson)
             };
         }
 
         return new ModelContextOptions();
+    }
+
+    private static IReadOnlyList<AssistantWorkflowStageDefinition>? ParseStages(string? stagesJson)
+    {
+        if (string.IsNullOrWhiteSpace(stagesJson))
+        {
+            return null;
+        }
+
+        return JsonSerializer.Deserialize<List<AssistantWorkflowStageDefinition>>(stagesJson);
     }
 }

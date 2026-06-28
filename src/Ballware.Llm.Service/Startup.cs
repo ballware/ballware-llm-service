@@ -490,9 +490,11 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         app.UseCors();
         app.UseRouting();
 
+        app.UseAuthentication();
         app.UseAuthorization();
 
         app.MapChatEndpoint("ai/hubs");
+        app.MapOpenAiChatCompletionsEndpoint("/ai/v1");
         app.MapContextUserApi("/ai/context");
         app.MapOriginUserApi("/ai/origin");
         app.MapEmbeddingUserApi("/ai/embedding");

@@ -10,6 +10,7 @@ public class Context : IEditable
     
     public string? SystemPromptTemplate { get; set; }
     public string? WelcomeMessage { get; set; }
+    public string? FallbackMessage { get; set; }
     
     public bool Seed { get; set; }
 

@@ -6,6 +6,7 @@ public class ModelContextOptions
 {
     public string? Model { get; set; }
     public int? NumCtx { get; set; }
+    public string? AssistantFallbackMessage { get; set; }
     
     public IReadOnlyList<AssistantWorkflowStageDefinition>? AssistantStages { get; set; }
 

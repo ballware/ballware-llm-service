@@ -132,8 +132,7 @@ internal sealed class MsAgentNetworkAssistantWorkflow(
 
         if (string.IsNullOrWhiteSpace(fallbackMessage))
         {
-            fallbackMessage =
-                "Ich konnte mit den aktuell verfuegbaren internen und externen Quellen keine belastbare Antwort erzeugen.";
+            fallbackMessage = ResolveFallbackMessage(context);
         }
 
         logger.LogDebug(
@@ -146,6 +145,13 @@ internal sealed class MsAgentNetworkAssistantWorkflow(
             Message = fallbackMessage,
             Stage = AssistantPipelineStage.KnowledgeBase
         };
+    }
+
+    private static string ResolveFallbackMessage(AssistantWorkflowContext context)
+    {
+        return string.IsNullOrWhiteSpace(context.FallbackMessage)
+            ? "Ich konnte mit den aktuell verfuegbaren internen und externen Quellen keine belastbare Antwort erzeugen."
+            : context.FallbackMessage!;
     }
 
     private async Task<PipelineResult> ExecuteStructuredStageAsync(

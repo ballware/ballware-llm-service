@@ -79,6 +79,7 @@ internal class ModelContextProvider(ContextOptions options, IEmbeddingEngine emb
             {
                 Model = context.Model,
                 NumCtx = context.NumCtx,
+                AssistantFallbackMessage = context.FallbackMessage,
                 AssistantStages = ParseStages(context.AssistantStagesJson)
             };
         }

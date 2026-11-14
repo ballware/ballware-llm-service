@@ -20,6 +20,7 @@ internal sealed class MsAgentNetworkAssistantSessionFactory(
             Model = startOptions.Model,
             NumCtx = startOptions.NumCtx,
             SystemPrompt = startOptions.SystemPrompt,
+            FallbackMessage = startOptions.FallbackMessage,
             Stages = startOptions.Stages
         };
 

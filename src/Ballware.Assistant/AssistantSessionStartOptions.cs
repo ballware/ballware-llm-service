@@ -17,6 +17,8 @@ public class AssistantSessionStartOptions
     public int? NumCtx { get; init; }
 
     public string? SystemPrompt { get; init; }
+
+    public string? FallbackMessage { get; init; }
     
     public IReadOnlyList<AssistantWorkflowStageDefinition>? Stages { get; init; }
 }

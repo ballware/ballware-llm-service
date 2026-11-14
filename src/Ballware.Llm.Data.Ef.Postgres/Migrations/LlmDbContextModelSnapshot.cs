@@ -102,6 +102,10 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("creator_id");
 
+                    b.Property<string>("FallbackMessage")
+                        .HasColumnType("text")
+                        .HasColumnName("fallback_message");
+
                     b.Property<string>("Identifier")
                         .IsRequired()
                         .HasMaxLength(100)

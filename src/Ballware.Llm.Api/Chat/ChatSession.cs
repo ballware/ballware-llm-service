@@ -31,6 +31,7 @@ public class ChatSession(string connectionId, string contextIdentifier, Guid ten
             Model = options.Model,
             NumCtx = options.NumCtx,
             SystemPrompt = systemPrompt,
+            FallbackMessage = options.AssistantFallbackMessage,
             Stages = options.AssistantStages
         });
     }

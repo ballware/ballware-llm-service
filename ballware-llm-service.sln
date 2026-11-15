@@ -42,6 +42,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ballware.Llm.Embedding.Sema
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ballware.Llm.Hosting", "src\Ballware.Llm.Hosting\Ballware.Llm.Hosting.csproj", "{3C4520E1-7E55-4DAA-AFC0-7C0B23E4CC28}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ballware.Llm.App", "src\Ballware.Llm.App\Ballware.Llm.App.csproj", "{1C7EC1C6-77A8-4319-ABE8-470A956F82BC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -304,6 +306,18 @@ Global
 		{3C4520E1-7E55-4DAA-AFC0-7C0B23E4CC28}.Release|x64.Build.0 = Release|Any CPU
 		{3C4520E1-7E55-4DAA-AFC0-7C0B23E4CC28}.Release|x86.ActiveCfg = Release|Any CPU
 		{3C4520E1-7E55-4DAA-AFC0-7C0B23E4CC28}.Release|x86.Build.0 = Release|Any CPU
+		{1C7EC1C6-77A8-4319-ABE8-470A956F82BC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1C7EC1C6-77A8-4319-ABE8-470A956F82BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1C7EC1C6-77A8-4319-ABE8-470A956F82BC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{1C7EC1C6-77A8-4319-ABE8-470A956F82BC}.Debug|x64.Build.0 = Debug|Any CPU
+		{1C7EC1C6-77A8-4319-ABE8-470A956F82BC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1C7EC1C6-77A8-4319-ABE8-470A956F82BC}.Debug|x86.Build.0 = Debug|Any CPU
+		{1C7EC1C6-77A8-4319-ABE8-470A956F82BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1C7EC1C6-77A8-4319-ABE8-470A956F82BC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1C7EC1C6-77A8-4319-ABE8-470A956F82BC}.Release|x64.ActiveCfg = Release|Any CPU
+		{1C7EC1C6-77A8-4319-ABE8-470A956F82BC}.Release|x64.Build.0 = Release|Any CPU
+		{1C7EC1C6-77A8-4319-ABE8-470A956F82BC}.Release|x86.ActiveCfg = Release|Any CPU
+		{1C7EC1C6-77A8-4319-ABE8-470A956F82BC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

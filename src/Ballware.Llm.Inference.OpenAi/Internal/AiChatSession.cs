@@ -145,6 +145,8 @@ internal class AiChatSession : IChatSession
             EstimateTokenCount(responseText),
             responseText);
 
+        history.Add(new ChatMessage(ChatRole.User, message));
+
         if (!string.IsNullOrEmpty(responseText))
         {
             history.Add(new ChatMessage(ChatRole.Assistant, responseText));

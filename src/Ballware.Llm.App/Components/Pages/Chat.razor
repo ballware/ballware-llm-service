@@ -16,35 +16,84 @@
 @using Ballware.Shared.Authorization
 @using Microsoft.Extensions.AI
 
-<h1>Chat</h1>
-
-@if (!string.IsNullOrWhiteSpace(validationError))
-{
-    <p role="alert">@validationError</p>
-}
-else if (!ready)
-{
-    <p>Chat-Kontext wird vorbereitet…</p>
-}
-else
-{
-    <div class="chat-page">
+<div class="chat-page">
+    @if (!string.IsNullOrWhiteSpace(validationError))
+    {
+        <div class="chat-state">
+            <p role="alert">@validationError</p>
+        </div>
+    }
+    else if (!ready)
+    {
+        <div class="chat-state">
+            <p>Chat-Kontext wird vorbereitet…</p>
+        </div>
+    }
+    else
+    {
         <DxAIChat UseStreaming="true"
+                  ShowHeader="false"
                   CssClass="llm-chat"
                   ChatResponseProviderServiceKey="@ChatResponseProviderServiceKey"
                   Initialized="OnChatInitialized" />
-    </div>
-}
+    }
+</div>
 
 <style>
     .chat-page {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
         width: 100%;
-        height: calc(100vh - 4rem);
+        height: 100%;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .chat-state {
+        flex: 0 0 auto;
+        padding: 1rem;
     }
 
     .llm-chat {
+        display: block;
+        flex: 1 1 auto;
         width: 100%;
         height: 100%;
+        min-height: 0;
+        max-height: 100%;
+        overflow: hidden;
+    }
+
+    .llm-chat > dxbl-loading-panel {
+        height: 100%;
+        min-height: 0;
+    }
+
+    .llm-chat .dxbl-loading-panel-target-content,
+    .llm-chat .dxbl-chatui {
+        height: 100%;
+        min-height: 0;
+    }
+
+    .llm-chat .dxbl-chatui > .dxbl-chatui-header,
+    .llm-chat .dxbl-chatui > .dxbl-chatui-submitarea {
+        flex: 0 0 auto;
+    }
+
+    .llm-chat .dxbl-chatui > .dxbl-chatui-scrollviewer {
+        height: 0;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .llm-chat .dxbl-chatui-scrollviewer > .dxbl-scroll-viewer-content {
+        width: 100%;
+        height: 100%;
+        max-height: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
     }
 </style>
 

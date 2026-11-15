@@ -1,7 +1,7 @@
 using Ballware.Llm.Metadata;
 using Mapster;
 
-namespace Ballware.Llm.Service.Mappings;
+namespace Ballware.Llm.Hosting.Mappings;
 
 public class MetaServiceLlmMetadataProfile : IRegister
 {

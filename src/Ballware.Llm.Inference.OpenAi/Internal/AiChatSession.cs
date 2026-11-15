@@ -1,78 +1,200 @@
 using System.ClientModel;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+using ChatMessage = Ballware.Llm.Inference.ChatMessage;
+using ChatRole = Ballware.Llm.Inference.ChatRole;
+using AiChatMessage = Microsoft.Extensions.AI.ChatMessage;
+using AiChatRole = Microsoft.Extensions.AI.ChatRole;
 
 namespace Ballware.Llm.Inference.OpenAi.Internal;
 
-internal class AiChatSession(
-    IChatClient chat,
-    ChatOptions options,
-    IReadOnlyList<AITool> availableTools,
-    ILogger<AiChatSession> logger) : IChatSession
+internal class AiChatSession : IChatSession
 {
-    public async Task PromptAsync(string message, Action<string> tokenHandler)
-    {
-        Exception? lastException = null;
+    private readonly IChatClient chat;
+    private readonly ChatOptions options;
+    private readonly IReadOnlyList<AITool> availableTools;
+    private readonly ILogger<AiChatSession> logger;
+    private readonly List<ChatMessage> history = [];
 
-        var sb = new StringBuilder();
+    public AiChatSession(
+        IChatClient chat,
+        ChatOptions options,
+        IReadOnlyList<AITool> availableTools,
+        IReadOnlyList<ChatMessage>? initialHistory,
+        ILogger<AiChatSession> logger)
+    {
+        this.chat = chat;
+        this.options = options;
+        this.availableTools = availableTools;
+        this.logger = logger;
+
+        if (initialHistory != null)
+        {
+            foreach (var message in initialHistory)
+            {
+                if (message.Role != ChatRole.System && !string.IsNullOrEmpty(message.Content))
+                {
+                    history.Add(message);
+                }
+            }
+        }
+    }
+
+    public IReadOnlyList<ChatMessage> History => history;
+
+    public async IAsyncEnumerable<string> PromptStreamingAsync(
+        string message,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
         options.Tools = availableTools.ToList();
+
+        var messages = BuildMessages(message);
+        var requestSnapshot = BuildRequestSnapshot(message, options);
+
+        logger.LogDebug(
+            "LLM request payload (estimated tokens total: {EstimatedTotalTokens}, instructions: {EstimatedInstructionsTokens}, prompt: {EstimatedPromptTokens}, tools: {EstimatedToolsTokens}, tools count: {ToolCount}): {RequestPayload}",
+            requestSnapshot.EstimatedTotalTokens,
+            requestSnapshot.EstimatedInstructionsTokens,
+            requestSnapshot.EstimatedPromptTokens,
+            requestSnapshot.EstimatedToolsTokens,
+            requestSnapshot.ToolCount,
+            requestSnapshot.Payload);
+
+        logger.LogDebug(
+            "LLM prompt (estimated tokens: {EstimatedPromptTokens}): {Prompt}",
+            EstimateTokenCount(message),
+            message);
+
+        var responseBuilder = new StringBuilder();
+        var completed = false;
+        Exception? error = null;
+        var responseEnumerator = chat.GetStreamingResponseAsync(messages, options, cancellationToken).GetAsyncEnumerator();
 
         try
         {
-            var requestSnapshot = BuildRequestSnapshot(message, options);
-
-            logger.LogDebug(
-                "LLM request payload (estimated tokens total: {EstimatedTotalTokens}, instructions: {EstimatedInstructionsTokens}, prompt: {EstimatedPromptTokens}, tools: {EstimatedToolsTokens}, tools count: {ToolCount}): {RequestPayload}",
-                requestSnapshot.EstimatedTotalTokens,
-                requestSnapshot.EstimatedInstructionsTokens,
-                requestSnapshot.EstimatedPromptTokens,
-                requestSnapshot.EstimatedToolsTokens,
-                requestSnapshot.ToolCount,
-                requestSnapshot.Payload);
-
-            logger.LogDebug(
-                "LLM prompt (estimated tokens: {EstimatedPromptTokens}): {Prompt}",
-                EstimateTokenCount(message),
-                message);
-
-            await foreach (var response in chat.GetStreamingResponseAsync(message, options))
+            while (true)
             {
-                sb.Append(response);
+                bool hasNext;
+
+                try
+                {
+                    hasNext = await responseEnumerator.MoveNextAsync();
+                }
+                catch (ClientResultException ex) when (IsContextLengthError(ex))
+                {
+                    error = ex;
+
+                    logger.LogWarning(ex,
+                        "LLM request exceeded context window.");
+
+                    break;
+                }
+                catch (ClientResultException ex)
+                {
+                    error = ex;
+
+                    logger.LogError(ex,
+                        "Ollama API returned HTTP {StatusCode}. Response body: {ResponseBody}",
+                        ex.Status, ex.Message);
+
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    error = ex;
+
+                    logger.LogError(ex, "Unexpected error during streaming response from Ollama API");
+
+                    break;
+                }
+
+                if (!hasNext)
+                {
+                    completed = true;
+                    break;
+                }
+
+                var responseDelta = GetResponseDelta(responseEnumerator.Current);
+
+                if (string.IsNullOrEmpty(responseDelta))
+                {
+                    continue;
+                }
+
+                responseBuilder.Append(responseDelta);
+                yield return responseDelta;
+            }
+        }
+        finally
+        {
+            await responseEnumerator.DisposeAsync();
+        }
+
+        if (!completed)
+        {
+            throw error ?? new InvalidOperationException("LLM request failed unexpectedly.");
+        }
+
+        var responseText = responseBuilder.ToString();
+
+        logger.LogDebug(
+            "LLM response (estimated tokens: {EstimatedResponseTokens}): {Response}",
+            EstimateTokenCount(responseText),
+            responseText);
+
+        if (!string.IsNullOrEmpty(responseText))
+        {
+            history.Add(new ChatMessage(ChatRole.Assistant, responseText));
+        }
+    }
+
+    public async Task PromptAsync(
+        string message,
+        Action<string> tokenHandler,
+        CancellationToken cancellationToken = default)
+    {
+        await foreach (var token in PromptStreamingAsync(message, cancellationToken))
+        {
+            tokenHandler(token);
+        }
+    }
+
+    private List<AiChatMessage> BuildMessages(string message)
+    {
+        var messages = new List<AiChatMessage>();
+
+        foreach (var historyItem in history)
+        {
+            if (string.IsNullOrEmpty(historyItem.Content))
+            {
+                continue;
             }
 
-            var responseText = sb.ToString();
+            messages.Add(new AiChatMessage(MapRole(historyItem.Role), historyItem.Content));
+        }
 
-            logger.LogDebug(
-                "LLM response (estimated tokens: {EstimatedResponseTokens}): {Response}",
-                EstimateTokenCount(responseText),
-                responseText);
+        messages.Add(new AiChatMessage(AiChatRole.User, message));
 
-            tokenHandler(responseText);
-            return;
-        }
-        catch (ClientResultException ex) when (IsContextLengthError(ex))
-        {
-            lastException = ex;
+        return messages;
+    }
 
-            logger.LogWarning(ex,
-                "LLM request exceeded context window.");
-        }
-        catch (ClientResultException ex)
+    private static string GetResponseDelta(ChatResponseUpdate response)
+    {
+        return response.ToString() ?? string.Empty;
+    }
+
+    private static AiChatRole MapRole(ChatRole role)
+    {
+        return role switch
         {
-            logger.LogError(ex,
-                "Ollama API returned HTTP {StatusCode}. Response body: {ResponseBody}",
-                ex.Status, ex.Message);
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Unexpected error during streaming response from Ollama API");
-            throw;
-        }
-        
-        throw lastException ?? new InvalidOperationException("LLM request failed unexpectedly.");
+            ChatRole.System => AiChatRole.System,
+            ChatRole.User => AiChatRole.User,
+            ChatRole.Assistant => AiChatRole.Assistant,
+            _ => AiChatRole.User
+        };
     }
 
     private static long EstimateTokenCount(string text)

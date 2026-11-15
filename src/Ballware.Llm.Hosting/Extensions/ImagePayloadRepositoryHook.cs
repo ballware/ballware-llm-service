@@ -1,7 +1,7 @@
 using Ballware.Shared.Data.Repository;
 using Ballware.Storage.Service.Client;
 
-namespace Ballware.Llm.Service.Extensions;
+namespace Ballware.Llm.Hosting.Extensions;
 
 public class ImagePayloadRepositoryHook(StorageServiceClient storageClient) : ITenantableRepositoryHook<Ballware.Llm.Data.Public.Image, Ballware.Llm.Data.Persistables.Image>
 {

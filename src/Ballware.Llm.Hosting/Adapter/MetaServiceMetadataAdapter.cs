@@ -1,36 +1,36 @@
-using Ballware.Meta.Service.Client;
 using Ballware.Llm.Metadata;
+using Ballware.Meta.Service.Client;
 using Ballware.Shared.Api;
 using Ballware.Shared.Authorization;
 using MapsterMapper;
 
-namespace Ballware.Llm.Service.Adapter;
+namespace Ballware.Llm.Hosting.Adapter;
 
 public class MetaServiceMetadataAdapter : IAuthorizationMetadataProvider, IExportMetadataProvider, IJobMetadataProvider
 {
     private IMapper Mapper { get; }
     private MetaServiceClient MetaClient { get; }
-    
+
     public MetaServiceMetadataAdapter(IMapper mapper, MetaServiceClient metaClient)
     {
         Mapper = mapper;
         MetaClient = metaClient;
     }
-    
+
     public async Task<ITenantAuthorizationMetadata?> MetadataForTenantByIdAsync(Guid tenantId)
     {
         var tenant = await MetaClient.TenantServiceMetadataAsync(tenantId);
-        
-        return Mapper.Map<Tenant>(tenant);   
+
+        return Mapper.Map<Tenant>(tenant);
     }
 
     public async Task<IEntityAuthorizationMetadata?> MetadataForEntityByTenantAndIdentifierAsync(Guid tenantId, string entity)
     {
         var entityMetadata = await MetaClient.EntityServiceMetadataForTenantByIdentifierAsync(tenantId, entity);
-        
-        return Mapper.Map<EntityMetadata>(entityMetadata);  
+
+        return Mapper.Map<EntityMetadata>(entityMetadata);
     }
-    
+
     public async Task<Guid> CreateExportAsync(Guid tenantId, Guid userId, Shared.Api.Public.Export payload)
     {
         return await MetaClient.ExportCreateForTenantBehalfOfUserAsync(tenantId, userId, new ExportCreatePayload()
@@ -57,7 +57,7 @@ public class MetaServiceMetadataAdapter : IAuthorizationMetadataProvider, IExpor
             MediaType = export.MediaType,
         };
     }
-    
+
     public async Task<Guid> CreateJobAsync(Guid tenantId, Guid userId, string scheduler, string identifier, string? options)
     {
         var job = await MetaClient.JobCreateForTenantBehalfOfUserAsync(tenantId, userId, new JobCreatePayload()
@@ -71,7 +71,7 @@ public class MetaServiceMetadataAdapter : IAuthorizationMetadataProvider, IExpor
         {
             throw new InvalidOperationException($"Failed to create job for tenant {tenantId}.");
         }
-        
+
         return job.Id;
     }
 

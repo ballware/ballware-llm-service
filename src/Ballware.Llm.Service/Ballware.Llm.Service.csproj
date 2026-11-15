@@ -64,5 +64,6 @@
       <ProjectReference Include="..\Ballware.Llm.Tools.Common\Ballware.Llm.Tools.Common.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Tools.Embedding\Ballware.Llm.Tools.Embedding.csproj" />
       <ProjectReference Include="..\Ballware.Llm.Tools\Ballware.Llm.Tools.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Hosting\Ballware.Llm.Hosting.csproj" />
     </ItemGroup>
 </Project>

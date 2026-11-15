@@ -68,7 +68,10 @@ public class ChatHub(IServiceProvider serviceProvider, IPrincipalUtils principal
                 await session.StartChatAsync(scope.ServiceProvider, inferenceEngine, modelContextProvider, message);
             }
 
-            await session.Chat!.PromptAsync(message, (token) => Clients.Caller.SendAsync("Response", token));
+            await foreach (var token in session.Chat!.PromptStreamingAsync(message, Context.ConnectionAborted))
+            {
+                await Clients.Caller.SendAsync("Response", token);
+            }
         }
         catch (Exception ex)
         {

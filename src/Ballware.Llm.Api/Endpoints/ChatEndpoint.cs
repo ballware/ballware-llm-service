@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text;
 using System.Text.Json;
 using Ballware.Llm.Api.Chat;
 using Ballware.Llm.Api.Model;
@@ -87,12 +88,25 @@ public static class ChatEndpoint
             SystemPrompt = systemPrompt
         }, tenantId, userId, userClaims, userAccessToken);
 
-        var responseText = string.Empty;
-        await chat.PromptAsync(prompt, token => responseText += token);
+        if (body.Stream)
+        {
+            return Results.Stream(
+                async stream => await WriteStreamingResponseAsync(
+                    stream,
+                    body.Model,
+                    chat.PromptStreamingAsync(prompt, httpContext.RequestAborted),
+                    logger),
+                "text/event-stream");
+        }
 
-        return body.Stream
-            ? Results.Stream(async stream => await WriteStreamingResponseAsync(stream, body.Model, responseText), "text/event-stream")
-            : Results.Ok(BuildResponse(body.Model, responseText));
+        var responseText = new StringBuilder();
+
+        await foreach (var token in chat.PromptStreamingAsync(prompt, httpContext.RequestAborted))
+        {
+            responseText.Append(token);
+        }
+
+        return Results.Ok(BuildResponse(body.Model, responseText.ToString()));
     }
 
     private static string BuildPrompt(IEnumerable<OpenAiChatCompletionMessage> messages)
@@ -127,10 +141,15 @@ public static class ChatEndpoint
         };
     }
 
-    private static async Task WriteStreamingResponseAsync(Stream stream, string model, string responseText)
+    private static async Task WriteStreamingResponseAsync(
+        Stream stream,
+        string model,
+        IAsyncEnumerable<string> deltas,
+        ILogger logger)
     {
         var created = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         var id = $"chatcmpl-{Guid.NewGuid():N}";
+        var responseText = new StringBuilder();
 
         await WriteServerSentEventAsync(stream, new OpenAiChatCompletionStreamResponse()
         {
@@ -144,12 +163,39 @@ public static class ChatEndpoint
                     Index = 0,
                     Delta = new OpenAiChatCompletionMessage()
                     {
-                        Role = "assistant",
-                        Content = responseText
+                        Role = "assistant"
                     }
                 }
             }
         });
+
+        await foreach (var delta in deltas)
+        {
+            if (string.IsNullOrEmpty(delta))
+            {
+                continue;
+            }
+
+            responseText.Append(delta);
+
+            await WriteServerSentEventAsync(stream, new OpenAiChatCompletionStreamResponse()
+            {
+                Id = id,
+                Created = created,
+                Model = model,
+                Choices = new List<OpenAiChatCompletionStreamChoice>()
+                {
+                    new()
+                    {
+                        Index = 0,
+                        Delta = new OpenAiChatCompletionMessage()
+                        {
+                            Content = delta
+                        }
+                    }
+                }
+            });
+        }
 
         await WriteServerSentEventAsync(stream, new OpenAiChatCompletionStreamResponse()
         {
@@ -170,6 +216,13 @@ public static class ChatEndpoint
         await using var writer = new StreamWriter(stream, leaveOpen: true);
         await writer.WriteAsync("data: [DONE]\n\n");
         await writer.FlushAsync();
+
+        var completedResponseText = responseText.ToString();
+
+        logger.LogDebug(
+            "LLM streamed response (estimated tokens: {EstimatedResponseTokens}): {Response}",
+            EstimateTokenCount(completedResponseText),
+            completedResponseText);
     }
 
     private static async Task WriteServerSentEventAsync<T>(Stream stream, T payload)

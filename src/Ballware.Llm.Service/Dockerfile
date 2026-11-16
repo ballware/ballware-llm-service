@@ -19,6 +19,7 @@ COPY ./Ballware.Llm.Docling.Client ./Ballware.Llm.Docling.Client
 COPY ./Ballware.Llm.Embedding ./Ballware.Llm.Embedding
 COPY ./Ballware.Llm.Embedding.OpenAi ./Ballware.Llm.Embedding.OpenAi
 COPY ./Ballware.Llm.Embedding.SemanticKernel ./Ballware.Llm.Embedding.SemanticKernel
+COPY ./Ballware.Llm.Hosting ./Ballware.Llm.Hosting
 COPY ./Ballware.Llm.Inference ./Ballware.Llm.Inference
 COPY ./Ballware.Llm.Inference.OpenAi ./Ballware.Llm.Inference.OpenAi
 COPY ./Ballware.Llm.Ingestion ./Ballware.Llm.Ingestion

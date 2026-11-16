@@ -1,7 +1,7 @@
 using Ballware.Shared.Data.Repository;
 using Ballware.Storage.Service.Client;
 
-namespace Ballware.Llm.Service.Extensions;
+namespace Ballware.Llm.Hosting.Extensions;
 
 public class OriginPayloadRepositoryHook(StorageServiceClient storageClient) : ITenantableRepositoryHook<Ballware.Llm.Data.Public.Origin, Ballware.Llm.Data.Persistables.Origin>
 {
@@ -14,7 +14,7 @@ public class OriginPayloadRepositoryHook(StorageServiceClient storageClient) : I
             if (reportBinaryResponse != null)
             {
                 using var reader = new StreamReader(stream: reportBinaryResponse.Stream, encoding: System.Text.Encoding.Unicode);
-                
+
                 value.Content = reader.ReadToEnd();
             }
         }
@@ -30,7 +30,7 @@ public class OriginPayloadRepositoryHook(StorageServiceClient storageClient) : I
             {
                 var bytes = System.Text.Encoding.Unicode.GetBytes(value.Content);
                 using var stream = new MemoryStream(bytes);
-                
+
                 storageClient.AttachmentUploadForTenantEntityAndOwnerBehalfOfUser(tenantId, userId.Value, "origin", value.Id,
                     [new FileParameter(stream, CreatePayloadFileName(value.ContentType), value.ContentType)]);
             }
@@ -57,7 +57,7 @@ public class OriginPayloadRepositoryHook(StorageServiceClient storageClient) : I
                 throw new InvalidOperationException("Unsupported content type: " + contentType);
             }
         }
-        
+
         return $"payload{evaluatedExtension}";
     }
 }

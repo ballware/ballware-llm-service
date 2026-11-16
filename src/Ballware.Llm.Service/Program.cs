@@ -1,5 +1,5 @@
+using Ballware.Llm.Hosting.Configuration;
 using Ballware.Llm.Service;
-using Ballware.Llm.Service.Configuration;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Configuration;

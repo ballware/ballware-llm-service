@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <IsPackable>false</IsPackable>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ballware.meta.service.client" Version="1.3.2" />
+        <PackageReference Include="ballware.storage.service.client" Version="9.3.1" />
+        <PackageReference Include="Ballware.Shared.Api.Endpoints" Version="1.1.0" />
+        <PackageReference Include="Ballware.Shared.Authorization.Jint" Version="1.1.0" />
+        <PackageReference Include="ballware.shared.authorization" Version="1.1.0" />
+        <PackageReference Include="Ballware.Shared.Data" Version="1.1.0" />
+        <PackageReference Include="Duende.AccessTokenManagement" Version="4.1.1" />
+        <PackageReference Include="Mapster.DependencyInjection" Version="1.0.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Ballware.Llm.Api\Ballware.Llm.Api.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Context\Ballware.Llm.Context.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Data.Ef.Postgres\Ballware.Llm.Data.Ef.Postgres.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Data.Ef\Ballware.Llm.Data.Ef.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Data\Ballware.Llm.Data.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Embedding.OpenAi\Ballware.Llm.Embedding.OpenAi.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Embedding.SemanticKernel\Ballware.Llm.Embedding.SemanticKernel.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Embedding\Ballware.Llm.Embedding.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Inference.OpenAi\Ballware.Llm.Inference.OpenAi.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Inference\Ballware.Llm.Inference.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Metadata\Ballware.Llm.Metadata.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Tools.Common\Ballware.Llm.Tools.Common.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Tools.Embedding\Ballware.Llm.Tools.Embedding.csproj" />
+      <ProjectReference Include="..\Ballware.Llm.Tools\Ballware.Llm.Tools.csproj" />
+    </ItemGroup>
+
+</Project>

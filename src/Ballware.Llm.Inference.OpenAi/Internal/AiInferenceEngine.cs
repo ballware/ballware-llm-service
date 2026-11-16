@@ -107,6 +107,7 @@ internal class AiInferenceEngine(ILoggerFactory loggerFactory, OpenAiInferenceOp
             chat,
             chatOptions,
             tools,
+            contextOptions.InitialHistory,
             loggerFactory.CreateLogger<AiChatSession>());
     }
 }

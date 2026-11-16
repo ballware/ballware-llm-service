@@ -424,7 +424,12 @@ test-results/
 
 # Mac bundle stuff
 *.dmg
-*.app
+*.app/
+!src/Ballware.Llm.App/
+!src/Ballware.Llm.App/**
+src/Ballware.Llm.App/bin/
+src/Ballware.Llm.App/obj/
+src/Ballware.Llm.App/appsettings.local.json
 
 # content below from: https://github.com/github/gitignore/blob/master/Global/macOS.gitignore
 # General

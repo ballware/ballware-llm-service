@@ -1,18 +1,17 @@
-using Ballware.Llm.Jobs;
 using Ballware.Shared.Api;
 using Ballware.Storage.Service.Client;
 
-namespace Ballware.Llm.Service.Adapter;
+namespace Ballware.Llm.Hosting.Adapter;
 
-public class StorageServiceFileStorageAdapter : IFileStorageProvider, IJobFileStorageAdapter
+public class StorageServiceFileStorageAdapter : IFileStorageProvider
 {
     private StorageServiceClient StorageClient { get; }
-    
+
     public StorageServiceFileStorageAdapter(StorageServiceClient storageClient)
     {
         StorageClient = storageClient;
     }
-    
+
     public async Task<Stream> TemporaryFileByIdAsync(Guid tenantId, Guid temporaryId)
     {
         return (await StorageClient.TemporaryDownloadForTenantByIdAsync(tenantId, temporaryId)).Stream;
@@ -35,9 +34,9 @@ public class StorageServiceFileStorageAdapter : IFileStorageProvider, IJobFileSt
     {
         var response = await StorageClient.AttachmentDownloadForTenantEntityAndOwnerByIdAsync(tenantId, ownerEntity, ownerId,
             attachmentId);
-        
+
         var contentType = response.Headers["Content-Type"].First();
-        
+
         var stream = response.Stream;
 
         return (contentType, stream);

@@ -25,7 +25,8 @@ section, or aggregation entry from it.
 ## Grouping, tags, operation ids
 
 - Each endpoint is assigned the group `llm` (`.WithGroupName("llm")`) and a resource tag
-  (`.WithTags(...)`). Snapshot tags: `Chat`, `Chunk`, `Context`, `Embedding`, `Image`, `Origin`.
+  (`.WithTags(...)`). Snapshot tags: `Chat`, `Chunk`, `Context`, `Embedding`, `Image`, `Origin`,
+  `Session`.
 - Operation ids follow `<OperationPrefix><Name>`: `OriginAll`, `ContextById`, `ChunkRemove`,
   `ImageDownload`, plus the specific ones `OpenAiChatCompletions`, `ContextSimulateSystemPrompt`,
   `OriginAddFromAttachment`, `OriginCreateEmbedding`, `EmbeddingRecreate`.
@@ -42,7 +43,8 @@ section, or aggregation entry from it.
 | Origin | 13 | 2 specific (`addfromattachment`, `createembedding`) + 11 generic (`Startup.cs:247, 251`) |
 | Chunk | 11 | generic only (`Startup.cs:253`) |
 | Image | 11 | generic only (`Startup.cs:254`) |
-| **Total** | **60** | — |
+| Session | 11 | generic only (`Startup.cs:255`) — owner-scoped, see [generic-crud.md](generic-crud.md) |
+| **Total** | **71** | — |
 
 The SignalR hub `/ai/hubs/chat` (`Startup.cs:244`) is **not** part of any OpenAPI document — see
 [signalr-chat-hub.md](signalr-chat-hub.md).

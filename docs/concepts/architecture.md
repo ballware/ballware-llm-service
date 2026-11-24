@@ -4,7 +4,7 @@
 
 | Host | Entry point | What it exposes |
 | --- | --- | --- |
-| `src/Ballware.Llm.Service` | `Program.cs` + `Startup.cs` | the documented HTTP API (60 paths), the SignalR hub, Swagger, Quartz jobs |
+| `src/Ballware.Llm.Service` | `Program.cs` + `Startup.cs` | the documented HTTP API (71 paths), the SignalR hub, Swagger, Quartz jobs |
 | `src/Ballware.Llm.App` | `Program.cs` + `Startup.cs` | a Blazor Server chat UI (`/chat/{contextIdentifier}`), cookie/OIDC browser sign-in; **no** API endpoints, no Swagger, no jobs — see [chat-application.md](chat-application.md) |
 
 Both hosts call the same extension methods from `src/Ballware.Llm.Hosting/LlmHostingExtensions.cs`,

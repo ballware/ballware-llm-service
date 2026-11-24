@@ -1,6 +1,6 @@
 # Component schemas
 
-All **15** component schemas of [../openapi/llm.json](../openapi/llm.json), with the class each one is
+All **17** component schemas of [../openapi/llm.json](../openapi/llm.json), with the class each one is
 generated from. Entity schemas are the `Ballware.Llm.Data.Public` models mapped by Mapster
 (`src/Ballware.Llm.Data.Ef/Mapping/StorageMappingProfile.cs`); "required" reflects the snapshot's
 `required` arrays (Swashbuckle emits none unless the class has `[Required]` / C# `required` members).
@@ -86,6 +86,34 @@ part of retrieval output.
 
 The **binary** of an image is not in this schema — it lives in the Storage Service under owner entity
 `"image"` ([../concepts/payload-offloading.md](../concepts/payload-offloading.md)).
+
+## ChatSession
+
+`src/Ballware.Llm.Data/Public/ChatSession.cs` — no `required` entries; every field is optional on input.
+
+| Field | JSON type | Nullable | Notes |
+| --- | --- | --- | --- |
+| `Id` | string (uuid) | no | public uuid (`chat_session.uuid`), **not** the database `id` bigint |
+| `ContextIdentifier` | string | yes | the `context` the session belongs to; `new` binds it to the requesting principal's context set — a caller-supplied value is **ignored on `save`** |
+| `Title` | string | yes | the only field `save` writes |
+| `OwnerUserId` | string (uuid) | yes | **read-only**: mapped Persistable → Public only, never inbound (`StorageMappingProfile.cs`) |
+| `CreateStamp` | string (date-time) | yes | |
+| `LastChangeStamp` | string (date-time) | yes | |
+| `Messages` | array of `ChatSessionMessage` | yes | filled on `byid` only; `null` on `all` and `query` |
+
+## ChatSessionMessage
+
+`src/Ballware.Llm.Data/Public/ChatSessionMessage.cs` — no `required` entries.
+
+| Field | JSON type | Nullable | Notes |
+| --- | --- | --- | --- |
+| `Role` | string | yes | `user` / `assistant` / `system` as persisted by the chat UI |
+| `Content` | string | yes | message text |
+| `Sequence` | integer (int32) | no | 0-based order within the session (`MAX(sequence) + 1` on append) |
+| `CreateStamp` | string (date-time) | yes | |
+
+`ChatSession` has no `Payload`/`AttachmentId` and no export shape — see
+[generic-crud.md](generic-crud.md).
 
 ## OriginAddFromAttachmentRequest
 

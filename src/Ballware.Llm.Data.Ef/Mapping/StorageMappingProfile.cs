@@ -46,5 +46,18 @@ class StorageMappingProfile : IRegister
         config.NewConfig<Persistables.Image, Public.Image>()
             .Map(dest => dest.Id, src => src.Uuid)
             .Map(dest => dest.Data, src => src.Data.ToArray());
+        
+        config.NewConfig<Public.ChatSession, Persistables.ChatSession>()
+            .Ignore(dest => dest.Id!)
+            .Ignore(dest => dest.UserId)
+            .Ignore(dest => dest.CreatorId)
+            .Ignore(dest => dest.CreateStamp)
+            .Ignore(dest => dest.LastChangerId)
+            .Ignore(dest => dest.LastChangeStamp)
+            .Map(dest => dest.Uuid, src => src.Id);
+        
+        config.NewConfig<Persistables.ChatSession, Public.ChatSession>()
+            .Map(dest => dest.Id, src => src.Uuid)
+            .Map(dest => dest.OwnerUserId, src => src.UserId);
     }
 }

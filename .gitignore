@@ -31,6 +31,8 @@ x86/
 [Aa][Rr][Mm]64/
 bld/
 [Bb]in/
+# dotnet-ef creates these literal "bin\Debug" artifact dirs on POSIX hosts (BuildHost drop folder)
+[Bb]in\\Debug/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/

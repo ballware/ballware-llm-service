@@ -3,6 +3,7 @@ using Ballware.Llm.Context.Configuration;
 using Ballware.Llm.Data.Ef;
 using Ballware.Llm.Data.Ef.Configuration;
 using Ballware.Llm.Data.Ef.Postgres;
+using Ballware.Llm.Data.Repository;
 using Ballware.Llm.Embedding;
 using Ballware.Llm.Embedding.Configuration;
 using Ballware.Llm.Embedding.OpenAi;
@@ -231,6 +232,8 @@ public static class LlmHostingExtensions
 
         if ("postgres".Equals(llmStorageOptions.Provider, StringComparison.InvariantCultureIgnoreCase))
         {
+            services.AddSingleton(configuration.GetSection("Chat").Get<ChatSessionStoreOptions>() ?? new ChatSessionStoreOptions());
+
             services.AddBallwareLlmStorageForPostgres(llmStorageOptions, llmStorageConnectionString);
         }
 
@@ -246,6 +249,13 @@ public static class LlmHostingExtensions
 
     public static IServiceCollection AddBallwareLlmSharedAuthorizationUtils(this IServiceCollection services, string tenantClaim, string userIdClaim, string rightClaim)
     {
+        services.AddSingleton(new LlmAuthorizationClaimsOptions
+        {
+            TenantClaim = tenantClaim,
+            UserIdClaim = userIdClaim,
+            RightClaim = rightClaim
+        });
+
         services.AddBallwareSharedJintRightsChecker();
 
         services.AddBallwareSharedAuthorizationUtils(tenantClaim, userIdClaim, rightClaim);
@@ -269,6 +279,8 @@ public static class LlmHostingExtensions
 
         services.AddScoped<ITenantableRepositoryHook<Data.Public.Origin, Data.Persistables.Origin>, OriginPayloadRepositoryHook>();
         services.AddScoped<ITenantableRepositoryHook<Data.Public.Image, Data.Persistables.Image>, ImagePayloadRepositoryHook>();
+
+        services.AddScoped<IChatSessionActorResolver, MetaServiceChatSessionActorResolver>();
 
         return services;
     }

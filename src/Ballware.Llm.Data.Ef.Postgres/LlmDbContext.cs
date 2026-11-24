@@ -17,4 +17,6 @@ public class LlmDbContext : DbContext, ILlmDbContext
     public DbSet<Embedding>  Embeddings { get; set; }
     public DbSet<Chunk>  Chunks { get; set; }
     public DbSet<Image> Images { get; set; }
+    public DbSet<ChatSession> ChatSessions { get; set; }
+    public DbSet<ChatMessage> ChatMessages { get; set; }
 }

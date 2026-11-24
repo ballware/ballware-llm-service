@@ -23,6 +23,137 @@ namespace Ballware.Llm.Data.Ef.Postgres.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Ballware.Llm.Data.Persistables.ChatMessage", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content");
+
+                    b.Property<DateTime?>("CreateStamp")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("create_stamp");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("creator_id");
+
+                    b.Property<DateTime?>("LastChangeStamp")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_change_stamp");
+
+                    b.Property<Guid?>("LastChangerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("last_changer_id");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("role");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("integer")
+                        .HasColumnName("sequence");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("Uuid")
+                        .HasColumnType("uuid")
+                        .HasColumnName("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "SessionId");
+
+                    b.HasIndex("TenantId", "Uuid")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "SessionId", "Sequence")
+                        .IsUnique();
+
+                    b.ToTable("chat_message");
+                });
+
+            modelBuilder.Entity("Ballware.Llm.Data.Persistables.ChatSession", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("ContextIdentifier")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("context_identifier");
+
+                    b.Property<DateTime?>("CreateStamp")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("create_stamp");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("creator_id");
+
+                    b.Property<DateTime?>("LastChangeStamp")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_change_stamp");
+
+                    b.Property<Guid?>("LastChangerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("last_changer_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<Guid>("Uuid")
+                        .HasColumnType("uuid")
+                        .HasColumnName("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "ContextIdentifier");
+
+                    b.HasIndex("TenantId", "UserId");
+
+                    b.HasIndex("TenantId", "Uuid")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "UserId", "ContextIdentifier");
+
+                    b.ToTable("chat_session");
+                });
+
             modelBuilder.Entity("Ballware.Llm.Data.Persistables.Chunk", b =>
                 {
                     b.Property<long>("Id")

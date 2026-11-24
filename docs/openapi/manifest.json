@@ -2,15 +2,15 @@
   "source": "Swashbuckle.AspNetCore.Cli swagger tofile",
   "toolVersion": "10.1.0",
   "environment": "Swagger",
-  "serviceVersion": "v0.0.1-42-7-g614749f-dirty",
-  "fetchedAt": "2026-11-22T17:02:28Z",
+  "serviceVersion": "v0.0.1-42-8-g7e727f4-dirty",
+  "fetchedAt": "2026-11-24T13:11:13Z",
   "documents": {
     "llm": {
       "file": "llm.json",
       "openapi": "3.0.4",
       "title": "ballware LLM user API",
-      "pathCount": 60,
-      "schemaCount": 15
+      "pathCount": 71,
+      "schemaCount": 17
     }
   }
 }

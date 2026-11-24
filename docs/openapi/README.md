@@ -5,7 +5,7 @@ One document is committed here, and it is the source of truth every API page in
 
 | File | Content |
 | --- | --- |
-| [llm.json](llm.json) | `ballware LLM user API` — 60 paths, 15 component schemas, OpenAPI `3.0.4` |
+| [llm.json](llm.json) | `ballware LLM user API` — 71 paths, 17 component schemas, OpenAPI `3.0.4` |
 | [manifest.json](manifest.json) | Provenance: generator tool + version, environment, git describe reference (`-dirty` suffix while the working tree has uncommitted changes), `fetchedAt`, per-document openapi/title/pathCount/schemaCount |
 | [fetch-spec.sh](fetch-spec.sh) | Generator script |
 
@@ -132,7 +132,7 @@ Generate the committed snapshot from a clean checkout to keep the recorded versi
 
 | Snapshot | Documented by |
 | --- | --- |
-| `llm.json` paths | [../api/generic-crud.md](../api/generic-crud.md) (55 generic operations), [../api/llm-api-resources.md](../api/llm-api-resources.md) (5 specific operations) |
+| `llm.json` paths | [../api/generic-crud.md](../api/generic-crud.md) (66 generic operations), [../api/llm-api-resources.md](../api/llm-api-resources.md) (5 specific operations) |
 | `llm.json` schemas | [../api/schemas.md](../api/schemas.md) |
 | `llm.json` paths + schemas | [../api/examples.md](../api/examples.md) (every example path exists in the snapshot) |
 | not in the snapshot | [../api/signalr-chat-hub.md](../api/signalr-chat-hub.md) — the SignalR hub is outside OpenAPI |

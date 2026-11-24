@@ -14,15 +14,15 @@ derived from the committed OpenAPI snapshot [openapi/llm.json](openapi/llm.json)
 | --- | --- |
 | [concepts/architecture.md](concepts/architecture.md) | Projects, composition roots, request pipeline, error contract (`ProblemDetails`), ports |
 | [concepts/tenancy-and-authorization.md](concepts/tenancy-and-authorization.md) | OIDC/JWT validation, scope → policy, claims, Jint rights check via Meta Service |
-| [concepts/data-model.md](concepts/data-model.md) | `context` / `origin` / `embedding` / `chunk` / `image` tables, pgvector `vector(768)`, cascade rules |
+| [concepts/data-model.md](concepts/data-model.md) | `context` / `origin` / `embedding` / `chunk` / `image` / `chat_session` / `chat_message` tables, pgvector `vector(768)`, cascade rules |
 | [concepts/payload-offloading.md](concepts/payload-offloading.md) | Storage Service attachment contract (`payload<extension>`, owner entity `origin`/`image`) |
 | [concepts/knowledge-pipeline.md](concepts/knowledge-pipeline.md) | Docling ingestion → chunking → embedding → image vectors (job-driven) |
 | [concepts/rag-context-and-tools.md](concepts/rag-context-and-tools.md) | System-prompt composition, `{GlobalContext}`/`{InitialPrompt}`, top-k retrieval, tool + MCP registry |
 | [concepts/background-jobs.md](concepts/background-jobs.md) | Quartz job keys, `JobDataMap` payloads, Meta Service job mirroring |
-| [concepts/chat-application.md](concepts/chat-application.md) | `Ballware.Llm.App` host: OIDC login, `/chat/{contextIdentifier}`, DxAIChat, differences vs. Service |
+| [concepts/chat-application.md](concepts/chat-application.md) | `Ballware.Llm.App` host: OIDC login, `/chat/{contextIdentifier}/{sessionId?}`, DxAIChat, persisted chat sessions, differences vs. Service |
 | [concepts/upstream-dependencies.md](concepts/upstream-dependencies.md) | Meta/Storage/Docling/OpenAI-compatible endpoints |
 | [api/README.md](api/README.md) | Two Swagger documents, `llm`-only snapshot, `service` = reserved placeholder, conventions |
-| [api/generic-crud.md](api/generic-crud.md) | The 11 generic editing operations × 5 resources and their query/import/export semantics |
+| [api/generic-crud.md](api/generic-crud.md) | The 11 generic editing operations × 6 resources and their query/import/export semantics |
 | [api/llm-api-resources.md](api/llm-api-resources.md) | Chat completions, simulate system prompt, origin/embedding job triggers |
 | [api/signalr-chat-hub.md](api/signalr-chat-hub.md) | Hub contract outside OpenAPI (`Prompt`/`Response`/`Error`, `access_token` query parameter) |
 | [api/schemas.md](api/schemas.md) | Field tables for every component schema of `llm.json` |
@@ -32,7 +32,7 @@ derived from the committed OpenAPI snapshot [openapi/llm.json](openapi/llm.json)
 
 ## Quick facts
 
-- One published OpenAPI document: `llm` ("ballware LLM user API", **60 paths**, **15 schemas**,
+- One published OpenAPI document: `llm` ("ballware LLM user API", **71 paths**, **17 schemas**,
   OpenAPI `3.0.4`). The second declared document `service` ("ballware LLM service API",
   `src/Ballware.Llm.Service/Startup.cs:178-182`) currently maps **no** operations — see
   [api/README.md](api/README.md).
@@ -64,11 +64,12 @@ ASP.NET Core routing + JWT bearer auth                                         S
   |  scope claim -> policy "mlApi" (used) / "serviceApi" (reserved)            Startup.cs:105-119
   v
 endpoint handler
-  |  5 LLM operations:  /ai/v1/chat/completions, /ai/context/simulatesystemprompt,
-  |                     /ai/origin/addfromattachment, /ai/origin/createembedding,
-  |                     /ai/embedding/recreate                                 Startup.cs:245-248
-  |  55 generic operations: /ai/{context|origin|embedding|chunk|image}/…       Startup.cs:250-254
-  |  1 SignalR hub: /ai/hubs/chat (outside OpenAPI)                            Startup.cs:244
+   |  5 LLM operations:  /ai/v1/chat/completions, /ai/context/simulatesystemprompt,
+   |                     /ai/origin/addfromattachment, /ai/origin/createembedding,
+   |                     /ai/embedding/recreate                                 Startup.cs:245-248
+   |  66 generic operations: /ai/{context|origin|embedding|chunk|image|session}/…  Startup.cs:250-255
+   |    (chat_session rows are additionally owner-filtered by the `sub` claim)
+   |  1 SignalR hub: /ai/hubs/chat (outside OpenAPI)                            Startup.cs:244
   v
 tenant + entity rights check (Jint scripts, metadata from Meta Service)        Ballware.Llm.Hosting
   |  candidate "ai.<entity>.<right>" evaluated by the tenant RightsCheckScript,
@@ -77,7 +78,7 @@ tenant + entity rights check (Jint scripts, metadata from Meta Service)        B
 repository (tenant-scoped, Mapster Public <-> Persistables)                    Ballware.Llm.Data.Ef
   |  payload hooks offload Origin.Content / Image binaries                     Ballware.Llm.Hosting/Extensions
   v
-PostgreSQL + pgvector (context / origin / embedding / chunk / image)           Ballware.Llm.Data.Ef.Postgres
+PostgreSQL + pgvector (context / origin / embedding / chunk / image / chat_session / chat_message)  Ballware.Llm.Data.Ef.Postgres
   |  top-k retrieval: ORDER BY data <=> query_vector (cosine distance)         ChunkRepository.cs:15-27
   v
 OpenAI-compatible inference + embedding endpoints (num_ctx, tool calls, MCP)   Ballware.Llm.Inference.OpenAi

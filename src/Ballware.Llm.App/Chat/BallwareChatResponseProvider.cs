@@ -1,11 +1,15 @@
 using System.Runtime.CompilerServices;
+using System.Text;
 using Ballware.Llm.Context;
+using Ballware.Llm.Data.Public;
+using Ballware.Llm.Data.Repository;
 using Ballware.Shared.Authorization;
 using DevExpress.AIIntegration.Chat;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using AiChatFinishReason = Microsoft.Extensions.AI.ChatFinishReason;
 using AiChatMessage = Microsoft.Extensions.AI.ChatMessage;
 using AiChatResponseUpdate = Microsoft.Extensions.AI.ChatResponseUpdate;
@@ -27,8 +31,14 @@ public sealed class BallwareChatResponseProvider(
     IPrincipalUtils principalUtils,
     AuthenticationStateProvider authenticationStateProvider,
     IHttpContextAccessor httpContextAccessor,
+    IChatSessionRepository chatSessionRepository,
+    IOptions<ChatSessionOptions> chatSessionOptions,
     ILogger<BallwareChatResponseProvider> logger) : IChatResponseProvider
 {
+    private const string DefaultTitle = "Unterhaltung";
+
+    private static readonly int MaxAutoTitleLength = 100;
+
     private IChatSession? chatSession;
 
     public async IAsyncEnumerable<AiChatResponseUpdate> GetResponseAsync(
@@ -89,6 +99,30 @@ public sealed class BallwareChatResponseProvider(
             yield break;
         }
 
+        var turnSessionId = await EnsurePersistedSessionAsync(prompt);
+
+        var turn = new TurnState();
+
+        await foreach (var update in StreamTurnAsync(chat, prompt, effectiveConversationId, turn, cancellationToken))
+        {
+            yield return update;
+        }
+
+        await PersistTurnAsync(turnSessionId, prompt, turn);
+
+        if (turnSessionId.HasValue)
+        {
+            chatScope.NotifySessionUpdated();
+        }
+    }
+
+    private async IAsyncEnumerable<AiChatResponseUpdate> StreamTurnAsync(
+        IChatSession chat,
+        string prompt,
+        string? conversationId,
+        TurnState turn,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
         var enumerator = chat.PromptStreamingAsync(prompt, cancellationToken).GetAsyncEnumerator();
 
         try
@@ -121,19 +155,25 @@ public sealed class BallwareChatResponseProvider(
 
                 if (cancelled)
                 {
+                    turn.Cancelled = true;
+
                     break;
                 }
 
                 if (hasNext && !string.IsNullOrEmpty(delta))
                 {
-                    yield return CreateAssistantUpdate(delta, effectiveConversationId);
+                    turn.AssistantText.Append(delta);
+
+                    yield return CreateAssistantUpdate(delta, conversationId);
                 }
 
                 if (!hasNext)
                 {
                     if (error != null)
                     {
-                        yield return CreateAssistantUpdate(error, effectiveConversationId);
+                        turn.Failed = true;
+
+                        yield return CreateAssistantUpdate(error, conversationId);
                     }
 
                     break;
@@ -162,13 +202,31 @@ public sealed class BallwareChatResponseProvider(
 
         var options = await modelContextProvider.ProvideOptionsAsync(tenantId, contextIdentifier);
         var systemPrompt = await modelContextProvider.ProvideSystemPromptAsync(tenantId, contextIdentifier, initialPrompt);
-        var welcomeMessage = await modelContextProvider.ProvideWelcomeMessageAsync(tenantId, contextIdentifier);
 
         var initialHistory = new List<BallwareChatMessage>();
+        var resumedSessionId = chatScope.SessionId;
 
-        if (!string.IsNullOrWhiteSpace(welcomeMessage))
+        if (resumedSessionId.HasValue)
         {
-            initialHistory.Add(new BallwareChatMessage(BallwareChatRole.Assistant, welcomeMessage));
+            var history = await chatSessionRepository.GetMessagesAsync(
+                tenantId,
+                userId,
+                resumedSessionId.Value,
+                chatSessionOptions.Value.MaxHistoryMessages);
+
+            foreach (var message in history)
+            {
+                initialHistory.Add(new BallwareChatMessage(MapRole(message.Role), message.Content));
+            }
+        }
+        else
+        {
+            var welcomeMessage = await modelContextProvider.ProvideWelcomeMessageAsync(tenantId, contextIdentifier);
+
+            if (!string.IsNullOrWhiteSpace(welcomeMessage))
+            {
+                initialHistory.Add(new BallwareChatMessage(BallwareChatRole.Assistant, welcomeMessage));
+            }
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -188,6 +246,105 @@ public sealed class BallwareChatResponseProvider(
             userAccessToken);
 
         return chatSession;
+    }
+
+    private async Task<Guid?> EnsurePersistedSessionAsync(string prompt)
+    {
+        if (chatScope.HasSession)
+        {
+            return chatScope.SessionId;
+        }
+
+        try
+        {
+            var session = await chatSessionRepository.CreateAsync(
+                chatScope.TenantId,
+                chatScope.UserId,
+                chatScope.ContextIdentifier!,
+                AutoTitle(prompt));
+
+            chatScope.SetSession(session.Id);
+
+            return session.Id;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Failed to create chat session for context {ContextIdentifier}; continuing without persistence.",
+                chatScope.ContextIdentifier);
+
+            return null;
+        }
+    }
+
+    private async Task PersistTurnAsync(Guid? sessionId, string prompt, TurnState turn)
+    {
+        if (!sessionId.HasValue)
+        {
+            return;
+        }
+
+        var messages = new List<ChatSessionMessage>
+        {
+            new()
+            {
+                Role = Ballware.Llm.Data.Persistables.ChatMessage.RoleUser,
+                Content = prompt
+            }
+        };
+
+        var assistantText = turn.AssistantText.ToString();
+
+        if (!turn.Failed && !string.IsNullOrEmpty(assistantText))
+        {
+            messages.Add(new ChatSessionMessage
+            {
+                Role = Ballware.Llm.Data.Persistables.ChatMessage.RoleAssistant,
+                Content = assistantText
+            });
+        }
+
+        try
+        {
+            await chatSessionRepository.AppendMessagesAsync(chatScope.TenantId, chatScope.UserId, sessionId.Value, messages);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Failed to persist chat turn for session {SessionId}; chat continues without persistence for this turn.",
+                sessionId);
+        }
+    }
+
+    private static BallwareChatRole MapRole(string? role)
+    {
+        return role switch
+        {
+            Ballware.Llm.Data.Persistables.ChatMessage.RoleAssistant => BallwareChatRole.Assistant,
+            Ballware.Llm.Data.Persistables.ChatMessage.RoleSystem => BallwareChatRole.System,
+            _ => BallwareChatRole.User
+        };
+    }
+
+    private static string AutoTitle(string prompt)
+    {
+        var title = new string(prompt.Trim().Select(character => character == '\r' || character == '\n' || character == '\t' ? ' ' : character).ToArray());
+
+        while (title.Contains("  "))
+        {
+            title = title.Replace("  ", " ");
+        }
+
+        title = title.Trim();
+
+        if (string.IsNullOrEmpty(title))
+        {
+            return DefaultTitle;
+        }
+
+        return title.Length > MaxAutoTitleLength ? title[..MaxAutoTitleLength].Trim() : title;
     }
 
     private static AiChatResponseUpdate CreateAssistantUpdate(string text, string? conversationId)
@@ -240,5 +397,12 @@ public sealed class BallwareChatResponseProvider(
         }
 
         return await httpContext.GetTokenAsync("access_token");
+    }
+
+    private sealed class TurnState
+    {
+        public StringBuilder AssistantText { get; } = new();
+        public bool Cancelled { get; set; }
+        public bool Failed { get; set; }
     }
 }

@@ -108,6 +108,8 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         Services.AddDevExpressBlazor();
         Services.AddDevExpressAI();
 
+        Services.AddOptions<ChatSessionOptions>().Bind(Configuration.GetSection("Chat"));
+
         Services.AddScoped<BallwareChatScope>();
         Services.AddScoped<BallwareChatResponseProvider>();
         Services.AddKeyedScoped<IChatResponseProvider>(

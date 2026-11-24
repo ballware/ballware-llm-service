@@ -1,5 +1,6 @@
 using Ballware.Llm.Api;
 using Ballware.Llm.Api.Endpoints;
+using Ballware.Llm.Data;
 using Ballware.Llm.Docling.Client;
 using Ballware.Llm.Hosting;
 using Ballware.Llm.Hosting.Adapter;
@@ -217,6 +218,26 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
 
                 if (exception != null)
                 {
+                    if (exception is ChatSessionNotVisibleException notVisible)
+                    {
+                        Log.Warning(notVisible, "Chat session is not visible for the acting user");
+
+                        var notFound = new ProblemDetails
+                        {
+                            Type = "https://httpstatuses.com/404",
+                            Title = "Not found.",
+                            Status = StatusCodes.Status404NotFound,
+                            Detail = app.Environment.IsDevelopment() ? notVisible.Message : null,
+                            Instance = context.Request.Path
+                        };
+
+                        context.Response.StatusCode = notFound.Status.Value;
+                        context.Response.ContentType = "application/problem+json";
+                        await context.Response.WriteAsJsonAsync(notFound);
+
+                        return;
+                    }
+
                     Log.Error(exception, "Unhandled exception occurred");
 
                     var problemDetails = new ProblemDetails
@@ -252,6 +273,7 @@ public class Startup(IWebHostEnvironment environment, ConfigurationManager confi
         app.MapTenantableEditingApi<Data.Public.Embedding>("/ai/embedding", "ai", "embedding", "Embedding", "Embedding", "mlApi", "llm");
         app.MapTenantableEditingApi<Data.Public.Chunk>("/ai/chunk", "ai", "chunk", "Chunk", "Chunk", "mlApi", "llm");
         app.MapTenantableEditingApi<Data.Public.Image>("/ai/image", "ai", "image", "Image", "Image", "mlApi", "llm");
+        app.MapTenantableEditingApi<Data.Public.ChatSession>("/ai/session", "ai", "session", "Session", "Session", "mlApi", "llm");
 
         var authorizationOptions = app.Services.GetService<IOptions<AuthorizationOptions>>()?.Value;
         var swaggerOptions = app.Services.GetService<IOptions<SwaggerOptions>>()?.Value;

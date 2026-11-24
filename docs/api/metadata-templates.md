@@ -9,11 +9,15 @@
 
 The generic editing operations check a right candidate composed as
 `<application>.<entity>.<right>` with `application="ai"` and `entity` ∈ {`context`, `origin`, `embedding`,
-`chunk`, `image`} (`src/Ballware.Llm.Service/Startup.cs:250-254`). The verdicts come from tenant metadata
-that the service fetches from the Meta Service (`Adapter/MetaServiceMetadataAdapter.cs:20-32`), so a tenant
-without `ai.<entity>` metadata gets `404 Entity <entity> not found for tenant <tenantId>` for every generic
-operation on that resource. Full mechanics:
+`chunk`, `image`, `session`} (`src/Ballware.Llm.Service/Startup.cs:250-255`). The verdicts come from tenant
+metadata that the service fetches from the Meta Service (`Adapter/MetaServiceMetadataAdapter.cs:20-32`), so a
+tenant without `ai.<entity>` metadata gets `404 Entity <entity> not found for tenant <tenantId>` for every
+generic operation on that resource. Full mechanics:
 [../concepts/tenancy-and-authorization.md](../concepts/tenancy-and-authorization.md).
+
+> `session` is the exception that needs metadata even for ordinary use: without an `ai.session` entity the
+> **whole** `/ai/session/*` mount answers `404 Entity session not found for tenant <id>`, including `all`
+> and `byid`.
 
 ## Rights naming
 
@@ -24,10 +28,13 @@ operation on that resource. Full mechanics:
 | `ai.embedding.view` … `ai.embedding.delete` | same | |
 | `ai.chunk.view` … `ai.chunk.delete` | same | |
 | `ai.image.view` … `ai.image.delete` | same | |
+| `ai.session.view` … `ai.session.delete` | same | |
+| `ai.session.admin` | not an operation: unlocks **all** sessions of the tenant in the repository's owner filter | |
 | `ai.<entity>.<identifier>` | `save`/`savebatch` with a non-`primary` identifier, and `export`/`exporturl` (identifier **is** the right) | `ai.origin.exportjson` |
 
 Recommended minimal set per entity: `view`, `add`, `edit`, `delete` plus one export identifier per
-exportable entity (e.g. `exportjson`).
+exportable entity (e.g. `exportjson`). For `session`: `view`, `add`, `edit`, `delete`, optionally `admin`,
+and **no** export identifier (export/import are unsupported for sessions).
 
 ## Tenant-level script (synthetic pattern)
 
@@ -41,6 +48,12 @@ const owned = (userinfo.right || []);
 if (right.startsWith('ai.context.')) {
   // context rows are the tenant's own chat configuration: administrators only
   return owned.includes('ai.context.admin');
+}
+if (right.startsWith('ai.session.')) {
+  // sessions are user-owned by default; ai.session.admin unlocks the whole tenant
+  if (right === 'ai.session.admin') return owned.includes('ai.session.admin');
+  if (right === 'ai.session.import' || right.startsWith('ai.session.export')) return false; // unsupported
+  return owned.includes('ai.session.view') || owned.includes('ai.session.admin');   // view / all / query / byid
 }
 if (right.startsWith('ai.chunk.') || right.startsWith('ai.image.')) {
   // derived data: read-only for everyone, mutations only via the job endpoints' flows
@@ -82,6 +95,25 @@ right the LLM Service checks: `POST /ai/origin/createembedding` verifies only th
 (`src/Ballware.Llm.Api/Endpoints/OriginEndpoint.cs:35`), so metadata rights do not gate it today. If a
 tenant wants embedding creation gated, that must be enforced in the metadata of the UI-facing application
 that calls this service, not here.
+
+For the `session` entity note that the entity stage receives the **bare** right (`view`, `add`, `edit`,
+`delete`) — the same stage is also reused by the actor resolver, which evaluates the candidate
+`ai.session.admin` with `right === 'admin'`:
+
+```javascript
+// synthetic extendedRightsCheck for the "session" entity
+const owned = (userinfo.right || []);
+if (right === 'import' || right.startsWith('export')) {
+  return false;   // not supported for sessions
+}
+if (right === 'admin') {
+  return owned.includes('ai.session.admin');
+}
+return result === true && (owned.includes('ai.session.' + right) || owned.includes('ai.session.admin'));
+```
+
+`ai.session.admin` has two effects: it passes the mount's right checks for every session operation, and it
+lifts the repository's owner filter so the actor sees sessions created by other users.
 
 ## Entity metadata skeleton (synthetic)
 

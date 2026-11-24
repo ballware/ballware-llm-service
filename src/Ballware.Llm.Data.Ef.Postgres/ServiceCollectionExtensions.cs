@@ -25,7 +25,7 @@ public static class ServiceCollectionExtensions
                 o.MigrationsAssembly(typeof(LlmDbContext).Assembly.FullName);
             });
 
-            o.ReplaceService<IModelCustomizer, LlmModelBaseCustomizer<Context, Origin, Embedding, Chunk, Image>>();
+            o.ReplaceService<IModelCustomizer, LlmModelBaseCustomizer<Context, Origin, Embedding, Chunk, Image, ChatSession, ChatMessage>>();
         });
 
         services.AddScoped<ILlmDbContext, LlmDbContext>();
@@ -44,6 +44,9 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ITenantableRepository<Public.Image>, ImageRepository>();
         services.AddScoped<IImageRepository, ImageRepository>();
+        
+        services.AddScoped<ITenantableRepository<Public.ChatSession>, ChatSessionBaseRepository>();
+        services.AddScoped<IChatSessionRepository, ChatSessionBaseRepository>();
         
         services.AddHostedService<InitializationWorker>();
         

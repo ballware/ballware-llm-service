@@ -1,7 +1,7 @@
 # LLM API resources
 
 Five operations are mounted outside the generic editing family (`Startup.cs:245-248`). All five are in
-the `llm` group of [../openapi/llm.json](../openapi/llm.json). The 55 generic operations are described
+the `llm` group of [../openapi/llm.json](../openapi/llm.json). The 66 generic operations are described
 once in [generic-crud.md](generic-crud.md).
 
 ## `POST /ai/v1/chat/completions`

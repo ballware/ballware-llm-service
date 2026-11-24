@@ -16,7 +16,7 @@ variables, `:12-16`), Serilog (`:18-23`), and Kestrel from the `Kestrel` section
 | Core wiring | `AddBallwareLlmCoreConfiguration` (`:70`), then `AddBallwareLlmClients`, `AddBallwareLlmDataStore`, `AddBallwareLlmSharedAuthorizationUtils`, `AddBallwareLlmMetadataAndStorageAdapters`, `AddBallwareLlmTools`, `AddBallwareLlmContextAndInference` (`:100-105`) |
 | Browser auth | `Services.AddBallwareBrowserAuthorization(Configuration, sessionOptions)` (`:82`) — the whole cookie + OIDC stack lives in the external packages `Ballware.Shared.Web.Oidc` / `Ballware.Shared.Web.Session` `1.3.0-alpha.4` (`Ballware.Llm.App.csproj:15-16`); `MapInboundClaims = false` for the OpenID Connect scheme (`:84-86`) |
 | Session | `Session` section: cookie `.Ballware.Llm.Session`, cache key prefix `llm:session:`, 60 min expiry, default session cookie suppressed, data-protection purpose `Ballware.Llm.Session.ClaimsPrincipal` (`appsettings.json:41-48`, in-code fallbacks `Startup.cs:72-80`) |
-| UI | `AddRazorComponents().AddInteractiveServerComponents(...)` with `MaximumReceiveMessageSize = 256 * 1024` for the Blazor circuit hub (`:90-92`), `AddDevExpressBlazor()` (`:108`), `AddDevExpressAI()` (`:109`) |
+| UI | `AddRazorComponents().AddInteractiveServerComponents(...)` with `MaximumReceiveMessageSize = 256 * 1024` for the Blazor circuit hub (`:90-92`), `AddDevExpressBlazor()` (`:108`), `AddDevExpressAI()` (`:109`); the Fluent theme is registered in `Components/App.razor:9` (`DxResourceManager.RegisterTheme(Themes.Fluent)`), which is what the chat page and its session sidebar render with |
 | Framing | `ContentSecurity.FrameAncestors` (`appsettings.json:39`) normalized to a CSP frame-ancestors value (`Startup.cs:30, 34-66`), passed to `AddInteractiveServerRenderMode` (`:188-192`); when foreign origins are allowed, `Antiforgery.SuppressXFrameOptionsHeader = true` (`:94-98`) |
 | Culture | `CurrentCulture`/`CurrentUICulture` forced to `de-DE` (`:179-184`) |
 | Middleware order | `UseForwardedHeaders (XForwardedFor \| XForwardedProto)` → `UseRouting` → `UseBallwareWebSession` → `UseBallwareChallengeDifferentiation` → `UseAuthentication` → `UseBallwareSignInChallengeFallback` → `UseAuthorization` → `UseAntiforgery` → `UseStaticFiles` (`:162-177`) |
@@ -32,14 +32,16 @@ ASP.NET Core default `/signin-oidc` — the App never sets `CallbackPath`, and `
 
 | Route | Behavior | Source |
 | --- | --- | --- |
-| `/chat/{contextIdentifier?}` | `[Authorize]` interactive chat page: resolves tenant/user claims, loads the `context` row via `IContextRepository.GetByIdentifierAsync`, pre-loads the welcome message, initializes the chat scope, renders `DxAIChat` | `Components/Pages/Chat.razor:1-3, 34-38, 123-150` |
-| `/chat` (parameter absent) | rejected — the chat is never rendered | `Chat.razor:104, 117-121` |
+| `/chat/{contextIdentifier}/{sessionId?}` | `[Authorize]` interactive chat page: resolves tenant/user claims, loads the `context` row via `IContextRepository.GetByIdentifierAsync`, loads the user's sessions of that context for the sidebar, resumes `sessionId` when present, pre-loads the welcome message, initializes the chat scope, renders `DxAIChat` | `Components/Pages/Chat.razor:2, 42-110, 284-363` |
+| `/chat/{contextIdentifier}` | same without a session: a fresh, not-yet-persisted conversation | `Chat.razor:2` |
+| `/chat` (parameter absent) | rejected — the chat is never rendered | `Chat.razor:1, 299-303` |
+| `/chat/{ctx}/{not-a-uuid}` or a session of another user/context | `Unterhaltung nicht verfügbar.` and no chat | `Chat.razor:331-351` |
 | package sign-on endpoint | cookie sign-on from an externally obtained `idToken`, mapped by `MapBallwareSignOnEndpoint()`; redirect prefixes restricted to `/chat` (`Authorization.SignOnAllowedRedirectPathPrefixes`) | `Startup.cs:186`, `appsettings.json:56-57` |
 | `/_blazor` | Blazor Server circuit hub only (SignalR is not used for LLM traffic) | `Startup.cs:90-92` |
 | anything else | "not found" content; there is no index page (`Index.razor` absent) | `Components/Routes.razor:11-15` |
 
 UI text is currently **German** (`lang="de"`, `Components/App.razor:2`; validation strings in
-`Chat.razor:29, 130, 155` and `Routes.razor:5-7`).
+`Chat.razor:29, 301-349` and `Routes.razor:5-7`).
 
 ## How it reaches the model
 
@@ -48,17 +50,53 @@ uses the in-process `IInferenceEngine`, which talks to the configured OpenAI-com
 
 | Step | Source |
 | --- | --- |
-| `DxAIChat` is bound to a keyed `IChatResponseProvider` | `Startup.cs:113-115` (key `"ballware-chat"`, `BallwareChatScope.cs:7`), `Chat.razor:37, 101` |
-| The provider injects `IInferenceEngine`, `IModelContextProvider`, `IPrincipalUtils`, `AuthenticationStateProvider`, `IHttpContextAccessor` | `Chat/BallwareChatResponseProvider.cs:22-30` |
-| Session created once per chat scope, with the **welcome message seeded as an assistant message** into `InitialHistory` — the only place `InitialHistory` is ever populated | `BallwareChatResponseProvider.cs:149-191`, esp. `:167-172, 183` |
-| Only the last user message is sent as the prompt | `BallwareChatResponseProvider.cs:202-233` |
-| Streaming consumed from `IChatSession.PromptStreamingAsync` and re-emitted as DevExpress chat updates | `BallwareChatResponseProvider.cs:92, 129` |
+| `DxAIChat` is bound to a keyed `IChatResponseProvider` | `Startup.cs:115-117` (key `"ballware-chat"`, `BallwareChatScope.cs:7`), `Chat.razor:104-110, 260` |
+| The provider injects `IInferenceEngine`, `IModelContextProvider`, `IPrincipalUtils`, `AuthenticationStateProvider`, `IHttpContextAccessor`, `IChatSessionRepository`, `IOptions<ChatSessionOptions>` | `Chat/BallwareChatResponseProvider.cs:26-37` |
+| Session created once per chat scope. **New conversation:** the welcome message is seeded as an assistant message into `InitialHistory`. **Resumed conversation:** the last `Chat:MaxHistoryMessages` persisted messages are loaded into `InitialHistory` instead, and the welcome message is neither replayed nor persisted | `BallwareChatResponseProvider.cs:184-244`, esp. `:201-236` |
+| Only the last user message is sent as the prompt | `BallwareChatResponseProvider.cs:354-385` |
+| Streaming consumed from `IChatSession.PromptStreamingAsync` and re-emitted as DevExpress chat updates | `BallwareChatResponseProvider.cs:114-182` |
 | The actual HTTP hop is the OpenAI client inside `AiInferenceEngine` | `src/Ballware.Llm.Inference.OpenAi/Internal/AiInferenceEngine.cs:14-17, 24-45` |
-| The user's access token is forwarded for MCP delegation | `BallwareChatResponseProvider.cs:161, 242` |
+| The user's access token is forwarded for MCP delegation | `BallwareChatResponseProvider.cs:196, 387-395` |
+
+## Session persistence
+
+Conversations are stored in the shared Postgres database (`chat_session` + `chat_message`,
+[data-model.md](data-model.md)) through `IChatSessionRepository` — the App reaches the repository
+directly, no HTTP hop, and **no rights check**: the App path is gated by the owner filter only.
+
+| Moment | Behaviour | Source |
+| --- | --- | --- |
+| first user turn | `CreateAsync(tenantId, userId, contextIdentifier, AutoTitle(prompt))` — the title is the first question truncated to 100 characters (fallback `Unterhaltung`) | `BallwareChatResponseProvider.cs:246-274`, `AutoTitle` `:326-343` |
+| after each completed turn | `AppendMessagesAsync` with the user prompt plus the concatenated streamed assistant text; `sequence` continues at `MAX(sequence) + 1` | `BallwareChatResponseProvider.cs:276-322` |
+| cancelled turn | the partial assistant text is persisted **only if** tokens were already streamed (that is what the user saw) | `BallwareChatResponseProvider.cs:150-155, 292-301` |
+| failed turn | the user message is persisted, the assistant message is not — matching the error update shown in the UI | `BallwareChatResponseProvider.cs:166-172, 292-301` |
+| persistence failure | logged, never breaks the stream; the chat continues ephemerally for that turn | `BallwareChatResponseProvider.cs:265-273, 307-320` |
+| resume | `Chat.razor` validates the session (`ByIdForUserAsync`), loads messages for `DxAIChat.LoadMessages`, and sets `ChatScope.SessionId`; `ConversationId` becomes the session uuid | `Chat.razor:331-347, 366-381`, `BallwareChatScope.cs:13-16, 44-48` |
+
+Sidebar (own sessions of the current context) is built with DevExpress Blazor components so it matches the
+ballware front-end styling: a `DxButton` (`ButtonRenderStyle.Primary`) for **Neue Unterhaltung**, and a
+`DxListBox<ChatSession, Guid>` (`KeyFieldName`/`ValueFieldName` = `Id`, `TextFieldName` = `Title`,
+`SelectionMode.Single`, `ShowSearchBox`) for the list — the active session is the list box selection,
+`EmptyDataAreaTemplate` covers the empty state, and `ItemDisplayTemplate` renders title + last-change stamp
+with `DxButton` (`ButtonRenderStyle.Link`) actions **Umbenennen** / **Löschen**. Renaming is inline in the
+item (`DxTextBox` + Speichern/Abbrechen `DxButton`s → `RenameAsync`); deleting asks first through
+`IDialogService.ConfirmAsync` (`MessageBoxRenderStyle.Danger`) with a `DxDialogProvider` on the page, then
+`DeleteForUserAsync`. Action buttons wrap their clicks in `@onclick:stopPropagation` so they do not select
+the item, and `ItemClick` is what opens a session (`Chat.razor:42-114, 383-512`). The list uses the theme's
+own selection/hover styling (`.dxbl-list-box-item-selected`); only its default 200px cap is overridden so it
+fills the sidebar (`Chat.razor:155-160`), and the sidebar border uses the theme token
+`--dxds-color-border-neutral-subdued-rest` instead of a hard-coded color.
+
+Session switching navigates with `forceLoad: true`, which rebuilds the circuit and therefore the scoped
+`BallwareChatResponseProvider` — a stale in-memory `chatSession` cannot leak across sessions
+(`Chat.razor:426-434, 436-466`).
+
+`ChatHub` and `POST /ai/v1/chat/completions` are **not** persisted: they stay ephemeral by design
+(see [../api/signalr-chat-hub.md](../api/signalr-chat-hub.md)).
 
 Multi-turn: stateful per chat scope (the `IChatSession` history), with `ConversationId` regenerated on
-reset/initialize (`BallwareChatScope.cs:13, 27, 36`) and used only as a UI-level id, never for a
-server-side lookup.
+reset/initialize and set to the session uuid when a session is resumed (`BallwareChatScope.cs:11-12, 33-51`);
+it remains a UI-level id, while `chat_session.uuid` is the server-side identity.
 
 ## Configuration
 
@@ -70,6 +108,13 @@ server-side lookup.
 `Llm.Provider = postgres` / `Llm.AutoMigrations = false` (`:61-62`), `Inference` and `Embedding`
 (`Endpoint`, `ApiKey`, `Model`) (`:64-72`), `MetaClient` / `StorageClient` (`ServiceUrl`,
 `CredentialIdentifier`) (`:74-81`), `ConnectionStrings.LlmStorageConnection` (`:83`), `AllowedHosts` (`:85`).
+
+`Chat` configures session handling (`:64-67`, bound in `Startup.cs:111`): `MaxHistoryMessages` (how many
+persisted messages are replayed into `ChatContextOptions.InitialHistory` on resume, default `50`) and
+`SessionListLimit` (how many own sessions the sidebar lists, default `50`). Both fall back to those
+defaults in code (`Chat/ChatSessionOptions.cs`), so existing deployments keep working without the section.
+Replaying 50 messages plus a large system prompt can exceed a context's `num_ctx`; that surfaces as the
+existing context-length error, and is tunable through `Chat:MaxHistoryMessages`.
 
 Not present in the tracked file (so they must come from `appsettings.local.json` or environment
 variables): `ServiceCredentials` (referenced by `MetaClient.CredentialIdentifier` /
@@ -88,7 +133,7 @@ the project. Secrets (client secrets, API keys, the database password) live only
 | --- | --- | --- |
 | Authentication | cookie + OIDC browser sign-in (`AddBallwareBrowserAuthorization`, `Startup.cs:82`) | JWT bearer only (`Service/Startup.cs:71-103`) |
 | Policies in code | none — scope/policy names are consumed by the external Oidc package from config (`appsettings.json:53-55`) | `mlApi` + `serviceApi` built in code (`Service/Startup.cs:105-119`) |
-| HTTP API | none | 60 paths + SignalR hub |
+| HTTP API | none | 71 paths + SignalR hub |
 | Swagger | absent | `llm` + empty `service` |
 | SignalR | Blazor circuit only | `ChatHub` at `/ai/hubs/chat` |
 | Quartz jobs | none | 5 job keys |

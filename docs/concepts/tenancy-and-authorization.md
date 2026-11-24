@@ -32,7 +32,7 @@ each part ordinally:
 
 | Policy | Matches | Default scope name | Used by |
 | --- | --- | --- | --- |
-| `mlApi` | `Authorization.RequiredMetaScope` | `mlApi` (`AuthorizationOptions.cs:26`) | every generic editing operation (`TenantantableEditingEndpoint.cs:23-114` via `Startup.cs:250-254`), `simulatesystemprompt` (`ContextEndpoint.cs:26`), `addfromattachment`/`createembedding` (`OriginEndpoint.cs:25, 35`), `recreate` (`EmbeddingEndpoint.cs:25`) |
+| `mlApi` | `Authorization.RequiredMetaScope` | `mlApi` (`AuthorizationOptions.cs:26`) | every generic editing operation (`TenantantableEditingEndpoint.cs:23-114` via `Startup.cs:250-255`), `simulatesystemprompt` (`ContextEndpoint.cs:26`), `addfromattachment`/`createembedding` (`OriginEndpoint.cs:25, 35`), `recreate` (`EmbeddingEndpoint.cs:25`) |
 | `serviceApi` | `Authorization.RequiredServiceScope` | `serviceApi` (`AuthorizationOptions.cs:27`) | **nothing** — the policy exists but no endpoint references it |
 
 Two operations use the **default** policy instead of a named one, i.e. "any authenticated user":
@@ -94,7 +94,7 @@ is therefore always `null`, and no state-transition scripting is used by this se
 ## Rights grammar
 
 The generic handlers compose a candidate `<application>.<entity>.<operation>`. With
-`application="ai"` and `entity=<resource>` (`Startup.cs:250-254`) the candidates are:
+`application="ai"` and `entity=<resource>` (`Startup.cs:250-255`) the candidates are:
 
 | Operation | Right | Source |
 | --- | --- | --- |
@@ -107,12 +107,39 @@ The generic handlers compose a candidate `<application>.<entity>.<operation>`. W
 | `download/{tenantId}/{id}` | anonymous | `TenantantableEditingEndpoint.cs:126` |
 
 Concrete candidates: `ai.context.view`, `ai.origin.edit`, `ai.embedding.add`, `ai.chunk.delete`,
-`ai.image.view`. (The strings are built at runtime by
+`ai.image.view`, `ai.session.view`, `ai.session.admin`. (The strings are built at runtime by
 `JavascriptTenantRightsChecker.cs:19` — they do not appear as literals in the source.)
 
 > The LLM-specific job triggers are **not** rights-checked: `addfromattachment`, `createembedding` and
 > `recreate` verify only the `mlApi` scope, so rights on `ai.origin`/`ai.embedding` do not gate them.
 > Same for the chat endpoints.
+
+## Owner scoping for chat sessions
+
+Tenancy alone is not enough for chat sessions: `chat_session` adds an **owner** (`user_id`), and
+`ChatSessionBaseRepository` enforces it in every query, independently of the rights scripts:
+
+| Path | Owner filter | Admin override |
+| --- | --- | --- |
+| `/ai/session/*` (Service) | applied in `ListQuery`/`ByIdQuery`, plus a visibility pre-check in `SaveAsync`/`RemoveAsync` | `ai.session.admin` (see below) |
+| Chat UI (`Ballware.Llm.App`) | applied through `ListByUserAsync`/`ByIdForUserAsync`/`RenameAsync`/`DeleteForUserAsync`/`AppendMessagesAsync` | none — the App path is owner-only, like the other chat endpoints |
+
+The actor is resolved by `IChatSessionActorResolver`
+(`src/Ballware.Llm.Data/Repository/IChatSessionActorResolver.cs`), implemented by
+`MetaServiceChatSessionActorResolver`
+(`src/Ballware.Llm.Hosting/Adapter/MetaServiceChatSessionActorResolver.cs`):
+
+1. user id = the acting user (the handler's `UserId` binding where present, otherwise the
+   `Authorization.UserIdClaim` claim, default `sub`);
+2. `IsAdmin` = the two-stage Jint check for the candidate **`ai.session.admin`** (`application="ai"`,
+   `entity="session"`, right `admin`), using the same tenant + entity metadata as the generic mounts.
+
+Missing tenant metadata, a missing `session` entity, or a script denial all resolve to
+`IsAdmin = false` — never to an error. A session the actor may not see is reported as `404`, and the
+owner id is never taken from the request body.
+
+`IChatSessionActorResolver` is registered in `AddBallwareLlmMetadataAndStorageAdapters`
+(`src/Ballware.Llm.Hosting/LlmHostingExtensions.cs`), so it is available in both hosts.
 
 ## Script-based enforcement
 
@@ -154,6 +181,8 @@ returning `false` when absent — `JavascriptEntityRightsChecker.cs:31-46`) are 
 | Tenant metadata not found | `404` | `Tenant <id> not found` | `EditingEndpointBuilder.cs:70-75` |
 | Entity metadata not found for the tenant | `404` | `Entity <name> not found for tenant <id>` | `EditingEndpointBuilder.cs:77-82` |
 | Item not found (`byid`) | `404` | empty (repository returns no row) | `TenantableEndpointHandlerFactory.cs` |
+| Chat session owned by another user (`byid`) | `404` | empty (owner predicate filters the row) | `ChatSessionBaseRepository.ByIdQuery` |
+| Chat session `save`/`remove` on a foreign or unknown id | `404` | `application/problem+json` | `ChatSessionNotVisibleException`, mapped in `Startup.cs` |
 | Remove precondition failed | `400` | joined messages | `TenantableEndpointHandlerFactory.cs:177-179` |
 | Hub connect without a valid token | `401` | — | `ChatHub.cs:19-22` |
 | Meta/Storage Service unreachable, invalid query identifier, missing entity parameter | `500` | `application/problem+json` | `Startup.cs:211-236` |

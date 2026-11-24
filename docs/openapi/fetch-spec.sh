@@ -96,7 +96,7 @@ fi
 service_version="$(git describe --tags --always --dirty 2>/dev/null || echo unknown)"
 
 TOOL_VERSION="$TOOL_VERSION" SERVICE_VERSION="$service_version" DOCUMENTS="${DOCUMENTS[*]}" \
-EXPECTED_PATHS="60" \
+ EXPECTED_PATHS="71" \
 python3 - "$OUTPUT_DIR" <<'PY'
 import datetime
 import json
@@ -142,7 +142,7 @@ for name in os.environ["DOCUMENTS"].split():
     if expected and abs(len(paths) - expected) > expected * 0.25:
         sys.exit(
             f"{path}: pathCount {len(paths)} deviates from the expected ~{expected} "
-            "(5 specific + 55 generic editing operations); review the API surface before publishing."
+            "(5 specific + 66 generic editing operations); review the API surface before publishing."
         )
 
 with open(os.path.join(output_dir, "manifest.json"), "w", encoding="utf-8") as file:

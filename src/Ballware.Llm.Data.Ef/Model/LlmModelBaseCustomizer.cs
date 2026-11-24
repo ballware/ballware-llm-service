@@ -5,13 +5,15 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Ballware.Llm.Data.Ef.Model;
 
-public class LlmModelBaseCustomizer<TContext, TOrigin, TEmbedding, TChunk, TImage> 
+public class LlmModelBaseCustomizer<TContext, TOrigin, TEmbedding, TChunk, TImage, TChatSession, TChatMessage> 
     : RelationalModelCustomizer 
-    where TContext : Context
+    where TContext : Context 
     where TOrigin : Origin 
     where TEmbedding : Embedding 
     where TChunk : Chunk
     where TImage : Image
+    where TChatSession : ChatSession
+    where TChatMessage : ChatMessage
 {
     public LlmModelBaseCustomizer(ModelCustomizerDependencies dependencies) 
         : base(dependencies)
@@ -62,5 +64,18 @@ public class LlmModelBaseCustomizer<TContext, TOrigin, TEmbedding, TChunk, TImag
         modelBuilder.Entity<TImage>().HasIndex(d => new { d.TenantId, d.Uuid }).IsUnique();
         modelBuilder.Entity<TImage>().HasIndex(d => d.TenantId);
         modelBuilder.Entity<TImage>().HasIndex(d => new { d.TenantId, d.OriginId });
+
+        modelBuilder.Entity<TChatSession>().HasKey(d => d.Id);
+        modelBuilder.Entity<TChatSession>().HasIndex(d => new { d.TenantId, d.Uuid }).IsUnique();
+        modelBuilder.Entity<TChatSession>().HasIndex(d => d.TenantId);
+        modelBuilder.Entity<TChatSession>().HasIndex(d => new { d.TenantId, d.UserId });
+        modelBuilder.Entity<TChatSession>().HasIndex(d => new { d.TenantId, d.UserId, d.ContextIdentifier });
+        modelBuilder.Entity<TChatSession>().HasIndex(d => new { d.TenantId, d.ContextIdentifier });
+
+        modelBuilder.Entity<TChatMessage>().HasKey(d => d.Id);
+        modelBuilder.Entity<TChatMessage>().HasIndex(d => new { d.TenantId, d.Uuid }).IsUnique();
+        modelBuilder.Entity<TChatMessage>().HasIndex(d => d.TenantId);
+        modelBuilder.Entity<TChatMessage>().HasIndex(d => new { d.TenantId, d.SessionId });
+        modelBuilder.Entity<TChatMessage>().HasIndex(d => new { d.TenantId, d.SessionId, d.Sequence }).IsUnique();
     }
 }

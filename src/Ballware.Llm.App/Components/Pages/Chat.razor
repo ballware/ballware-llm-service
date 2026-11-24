@@ -1,17 +1,24 @@
-@page "/chat/{contextIdentifier?}"
+@page "/chat"
+@page "/chat/{contextIdentifier}/{sessionId?}"
 @rendermode InteractiveServer
+@implements IDisposable
 @attribute [Microsoft.AspNetCore.Authorization.AuthorizeAttribute]
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IContextRepository ContextRepository
+@inject IChatSessionRepository ChatSessionRepository
 @inject IModelContextProvider ModelContextProvider
 @inject IPrincipalUtils PrincipalUtils
 @inject BallwareChatScope ChatScope
+@inject NavigationManager NavigationManager
+@inject IDialogService DialogService
+@inject Microsoft.Extensions.Options.IOptions<ChatSessionOptions> ChatSessionSettings
 @inject Microsoft.Extensions.Logging.ILogger<Chat> Logger
 
 @using System.Security.Claims
 
 @using Ballware.Llm.App.Chat
 @using Ballware.Llm.Context
+@using Ballware.Llm.Data.Public
 @using Ballware.Llm.Data.Repository
 @using Ballware.Shared.Authorization
 @using Microsoft.Extensions.AI
@@ -31,13 +38,91 @@
     }
     else
     {
-        <DxAIChat UseStreaming="true"
-                  ShowHeader="false"
-                  CssClass="llm-chat"
-                  ChatResponseProviderServiceKey="@ChatResponseProviderServiceKey"
-                  Initialized="OnChatInitialized" />
+        <div class="chat-body">
+            <aside class="chat-sidebar" aria-label="Unterhaltungen">
+                <DxButton CssClass="chat-session-new"
+                          Text="Neue Unterhaltung"
+                          RenderStyle="ButtonRenderStyle.Primary"
+                          Click="OpenNewSession"
+                          Enabled="@(!busy)" />
+                <DxListBox TData="ChatSession"
+                           TValue="Guid"
+                           Data="@sessions"
+                           KeyFieldName="@nameof(ChatSession.Id)"
+                           ValueFieldName="@nameof(ChatSession.Id)"
+                           TextFieldName="@nameof(ChatSession.Title)"
+                           SelectionMode="ListBoxSelectionMode.Single"
+                           Value="@(activeSessionId ?? Guid.Empty)"
+                           ItemClick="SessionList_ItemClick"
+                           ShowSearchBox="true"
+                           SearchBoxNullText="Unterhaltung suchen"
+                           CssClass="chat-session-list">
+                    <EmptyDataAreaTemplate>
+                        <div class="chat-session-empty">Noch keine Unterhaltungen.</div>
+                    </EmptyDataAreaTemplate>
+                    <ItemDisplayTemplate Context="sessionItem">
+                        @{
+                            var session = sessionItem.DataItem;
+                        }
+                        @if (renamingSessionId == session.Id)
+                        {
+                            <div class="chat-session-editor" @onclick="@(() => { })" @onclick:stopPropagation="true">
+                                <DxTextBox @bind-Text="renameTitle"
+                                           CssClass="chat-session-editor-input" />
+                                <DxButton Text="Speichern"
+                                          RenderStyle="ButtonRenderStyle.Primary"
+                                          Click="CommitRenameAsync"
+                                          Enabled="@(!busy)" />
+                                <DxButton Text="Abbrechen"
+                                          RenderStyle="ButtonRenderStyle.Light"
+                                          Click="CancelRename"
+                                          Enabled="@(!busy)" />
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="chat-session-row">
+                                <div class="chat-session-caption">
+                                    <span class="chat-session-title" title="@DisplayTitle(session)">@DisplayTitle(session)</span>
+                                    <span class="chat-session-stamp">@(session.LastChangeStamp?.ToString("dd.MM.yyyy HH:mm"))</span>
+                                </div>
+                                <span class="chat-session-actions" @onclick="@(() => { })" @onclick:stopPropagation="true">
+                                    <DxDropDownButton CssClass="chat-session-menu-button"
+                                                      RenderStyle="ButtonRenderStyle.Light"
+                                                      RenderStyleMode="ButtonRenderStyleMode.Outline"
+                                                      DropDownToggleVisible="false"
+                                                      DropDownPosition="DropDownPosition.Right"
+                                                      DropDownCssClass="chat-session-menu"
+                                                      Text="..."
+                                                      Tooltip="Aktionen"
+                                                      Enabled="@(!busy)">
+                                        <Items>
+                                            <DxDropDownButtonItem Text="Umbenennen"
+                                                                  Enabled="@(!busy)"
+                                                                  Click="() => StartRename(session)" />
+                                            <DxDropDownButtonItem Text="Löschen"
+                                                                  Enabled="@(!busy)"
+                                                                  Click="() => ConfirmAndDeleteSessionAsync(session)" />
+                                        </Items>
+                                    </DxDropDownButton>
+                                </span>
+                            </div>
+                        }
+                    </ItemDisplayTemplate>
+                </DxListBox>
+            </aside>
+            <div class="chat-main">
+                <DxAIChat @key="@chatKey"
+                          UseStreaming="true"
+                          ShowHeader="false"
+                          CssClass="llm-chat"
+                          ChatResponseProviderServiceKey="@ChatResponseProviderServiceKey"
+                          Initialized="OnChatInitialized" />
+            </div>
+        </div>
     }
 </div>
+<DxDialogProvider />
 
 <style>
     .chat-page {
@@ -53,6 +138,98 @@
     .chat-state {
         flex: 0 0 auto;
         padding: 1rem;
+    }
+
+    .chat-body {
+        display: flex;
+        flex: 1 1 auto;
+        min-height: 0;
+        width: 100%;
+    }
+
+    .chat-sidebar {
+        display: flex;
+        flex: 0 0 17rem;
+        flex-direction: column;
+        gap: 0.75rem;
+        min-height: 0;
+        padding: 0.75rem;
+        overflow: hidden;
+        border-right: 1px solid var(--dxds-color-border-neutral-subdued-rest, rgba(0, 0, 0, 0.12));
+    }
+
+    .chat-session-new {
+        flex: 0 0 auto;
+        width: 100%;
+    }
+
+    .chat-sidebar .chat-session-list {
+        flex: 1 1 auto;
+        min-height: 0;
+        height: auto;
+        max-height: none;
+    }
+
+    .chat-session-empty {
+        padding: 0.5rem;
+        opacity: 0.7;
+    }
+
+    .chat-session-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        width: 100%;
+    }
+
+    .chat-session-caption {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .chat-session-title {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .chat-session-stamp {
+        font-size: 0.75rem;
+        opacity: 0.7;
+    }
+
+    .chat-session-actions {
+        display: flex;
+        flex: 0 0 auto;
+        gap: 0.25rem;
+    }
+
+    .chat-session-menu-button {
+        min-width: 1.75rem;
+    }
+
+    .chat-session-menu {
+        min-width: 10rem;
+    }
+
+    .chat-session-editor {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        width: 100%;
+    }
+
+    .chat-session-editor-input {
+        width: 100%;
+    }
+
+    .chat-main {
+        display: flex;
+        flex: 1 1 auto;
+        min-width: 0;
+        min-height: 0;
     }
 
     .llm-chat {
@@ -103,16 +280,41 @@
     [Parameter]
     public string? contextIdentifier { get; set; }
 
+    [Parameter]
+    public string? sessionId { get; set; }
+
     private string? validationError;
     private string welcomeMessage = "";
     private bool ready;
+    private bool busy;
+
+    private Guid tenantId;
+    private Guid userId;
+    private Guid? activeSessionId;
+
+    private List<ChatSession> sessions = [];
+    private List<BlazorChatMessage> resumedMessages = [];
+    private Guid? renamingSessionId;
+    private string renameTitle = "";
+
+    private string chatKey = "new";
 
     protected override async Task OnInitializedAsync()
     {
+        ChatScope.SessionChanged += OnChatSessionChanged;
         ChatScope.Reset();
         ready = false;
+        busy = false;
         validationError = null;
         welcomeMessage = "";
+        sessions = [];
+        resumedMessages = [];
+        renamingSessionId = null;
+        renameTitle = "";
+        activeSessionId = null;
+        chatKey = "new";
+        tenantId = Guid.Empty;
+        userId = Guid.Empty;
 
         if (string.IsNullOrWhiteSpace(contextIdentifier))
         {
@@ -122,8 +324,8 @@
 
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
-        var tenantId = ResolveTenantId(user);
-        var userId = ResolveUserId(user);
+        tenantId = ResolveTenantId(user);
+        userId = ResolveUserId(user);
 
         if (tenantId == Guid.Empty || userId == Guid.Empty)
         {
@@ -146,8 +348,34 @@
                 return;
             }
 
+            if (TryParseSessionId(sessionId, out var requestedSessionId))
+            {
+                var session = await ChatSessionRepository.ByIdForUserAsync(tenantId, userId, requestedSessionId);
+
+                if (session == null || !string.Equals(session.ContextIdentifier, contextIdentifier, StringComparison.Ordinal))
+                {
+                    validationError = "Unterhaltung nicht verfügbar.";
+                    return;
+                }
+
+                activeSessionId = session.Id;
+                chatKey = session.Id.ToString("N");
+                resumedMessages = (await ChatSessionRepository
+                    .GetMessagesAsync(tenantId, userId, session.Id, ChatSessionSettings.Value.MaxHistoryMessages))
+                    .Select(MapChatMessage)
+                    .ToList();
+            }
+            else if (!string.IsNullOrWhiteSpace(sessionId))
+            {
+                validationError = "Unterhaltung nicht verfügbar.";
+                return;
+            }
+
             welcomeMessage = await ModelContextProvider.ProvideWelcomeMessageAsync(tenantId, contextIdentifier);
-            ChatScope.Initialize(user, tenantId, userId, contextIdentifier);
+
+            await ReloadSessionsAsync();
+
+            ChatScope.Initialize(user, tenantId, userId, contextIdentifier, activeSessionId);
             ready = true;
         }
         catch (Exception)
@@ -156,14 +384,209 @@
         }
     }
 
+    public void Dispose()
+    {
+        ChatScope.SessionChanged -= OnChatSessionChanged;
+    }
+
+    private void OnChatSessionChanged(Guid? sessionId)
+    {
+        if (!ready)
+        {
+            return;
+        }
+
+        activeSessionId = sessionId;
+        _ = InvokeAsync(ReloadSessionsAndRedrawAsync);
+    }
+
+    private async Task ReloadSessionsAndRedrawAsync()
+    {
+        try
+        {
+            await ReloadSessionsAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to refresh chat sessions after session {SessionId} changed.", activeSessionId);
+        }
+
+        StateHasChanged();
+    }
+
     private void OnChatInitialized(IAIChat chat)
     {
+        if (resumedMessages.Count > 0)
+        {
+            chat.LoadMessages(resumedMessages);
+
+            return;
+        }
+
         if (!string.IsNullOrWhiteSpace(welcomeMessage))
         {
             chat.LoadMessages([
                 new BlazorChatMessage(ChatRole.Assistant, welcomeMessage)
             ]);
         }
+    }
+
+    private void OpenNewSession()
+    {
+        OpenSession(null);
+    }
+
+    private void SessionList_ItemClick(ListBoxItemClickEventArgs<ChatSession, Guid> args)
+    {
+        if (busy || renamingSessionId.HasValue)
+        {
+            return;
+        }
+
+        OpenSession(args.DataItem.Id);
+    }
+
+    private async Task ConfirmAndDeleteSessionAsync(ChatSession session)
+    {
+        if (busy)
+        {
+            return;
+        }
+
+        busy = true;
+
+        var confirmed = await DialogService.ConfirmAsync(new MessageBoxOptions
+        {
+            Title = "Unterhaltung löschen",
+            Text = $"„{DisplayTitle(session)}“ wirklich löschen?",
+            OkButtonText = "Löschen",
+            CancelButtonText = "Abbrechen",
+            RenderStyle = MessageBoxRenderStyle.Danger
+        });
+
+        busy = false;
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        await DeleteSessionAsync(session.Id);
+    }
+
+    private void OpenSession(Guid? targetSessionId)
+    {
+        if (string.IsNullOrWhiteSpace(contextIdentifier))
+        {
+            return;
+        }
+
+        NavigationManager.NavigateTo(SessionUrl(targetSessionId), forceLoad: true);
+    }
+
+    private async Task DeleteSessionAsync(Guid targetSessionId)
+    {
+        if (busy)
+        {
+            return;
+        }
+
+        busy = true;
+
+        try
+        {
+            await ChatSessionRepository.DeleteForUserAsync(tenantId, userId, targetSessionId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to delete chat session {SessionId}.", targetSessionId);
+            busy = false;
+
+            return;
+        }
+
+        if (targetSessionId == activeSessionId)
+        {
+            NavigationManager.NavigateTo(SessionUrl(null), forceLoad: true);
+
+            return;
+        }
+
+        await ReloadSessionsAsync();
+        busy = false;
+    }
+
+    private void StartRename(ChatSession session)
+    {
+        renamingSessionId = session.Id;
+        renameTitle = session.Title ?? "";
+    }
+
+    private void CancelRename()
+    {
+        renamingSessionId = null;
+        renameTitle = "";
+    }
+
+    private async Task CommitRenameAsync()
+    {
+        if (busy || !renamingSessionId.HasValue)
+        {
+            return;
+        }
+
+        busy = true;
+
+        try
+        {
+            await ChatSessionRepository.RenameAsync(tenantId, userId, renamingSessionId.Value, renameTitle);
+
+            renamingSessionId = null;
+            renameTitle = "";
+
+            await ReloadSessionsAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to rename chat session {SessionId}.", renamingSessionId);
+        }
+
+        busy = false;
+    }
+
+    private async Task ReloadSessionsAsync()
+    {
+        sessions = (await ChatSessionRepository
+            .ListByUserAsync(tenantId, userId, contextIdentifier!, ChatSessionSettings.Value.SessionListLimit))
+            .ToList();
+    }
+
+    private string SessionUrl(Guid? targetSessionId)
+    {
+        return targetSessionId.HasValue
+            ? $"/chat/{contextIdentifier}/{targetSessionId.Value.ToString("N")}"
+            : $"/chat/{contextIdentifier}";
+    }
+
+    private static string DisplayTitle(ChatSession session)
+    {
+        return string.IsNullOrWhiteSpace(session.Title) ? "Unterhaltung" : session.Title;
+    }
+
+    private static bool TryParseSessionId(string? value, out Guid sessionId)
+    {
+        sessionId = Guid.Empty;
+
+        return !string.IsNullOrWhiteSpace(value) && Guid.TryParse(value, out sessionId);
+    }
+
+    private static BlazorChatMessage MapChatMessage(ChatSessionMessage message)
+    {
+        var role = string.Equals(message.Role, "assistant", StringComparison.OrdinalIgnoreCase)
+            ? ChatRole.Assistant
+            : ChatRole.User;
+
+        return new BlazorChatMessage(role, message.Content);
     }
 
     private Guid ResolveTenantId(ClaimsPrincipal principal)

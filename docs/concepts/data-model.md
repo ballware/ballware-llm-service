@@ -125,6 +125,37 @@ Indexes: `IX_image_tenant_id`, `IX_image_tenant_id_origin_id` (**non-unique**), 
 (`src/Ballware.Llm.Data.Ef.Postgres/Repository/ImageRepository.cs:13-25`), which currently has **no
 caller** in the ingestion or context path (only the tools/retrieval layer uses chunks).
 
+## `chat_session`
+
+`src/Ballware.Llm.Data/Persistables/ChatSession.cs`, created by `20261124125713_AddChatSessionStore.cs`.
+
+| Column | Type | Constraints |
+| --- | --- | --- |
+| `user_id` | `uuid` | NOT NULL — the **owner**; always stamped from the acting user, never client-supplied |
+| `context_identifier` | `character varying(100)` | NOT NULL — matches `context.identifier`, no FK |
+| `title` | `character varying(200)` | NULL until the first turn derives it |
+
+Indexes: `IX_chat_session_tenant_id`, `IX_chat_session_tenant_id_uuid` (unique),
+`IX_chat_session_tenant_id_user_id`, `IX_chat_session_tenant_id_user_id_context_identifier`,
+`IX_chat_session_tenant_id_context_identifier`.
+
+Every read is additionally owner-scoped (`user_id = <acting user>`) unless the actor carries the
+`ai.session.admin` right — see [tenancy-and-authorization.md](tenancy-and-authorization.md).
+
+## `chat_message`
+
+`src/Ballware.Llm.Data/Persistables/ChatMessage.cs`, created by `20261124125713_AddChatSessionStore.cs`.
+
+| Column | Type | Constraints |
+| --- | --- | --- |
+| `session_id` | `uuid` | NOT NULL, no FK → `chat_session.uuid` |
+| `role` | `character varying(20)` | NOT NULL — `system` / `user` / `assistant`; only `user` and `assistant` are persisted |
+| `content` | `text` | NOT NULL |
+| `sequence` | `integer` | NOT NULL, 1-based append order (`MAX(sequence) + 1`) |
+
+Indexes: `IX_chat_message_tenant_id`, `IX_chat_message_tenant_id_uuid` (unique),
+`IX_chat_message_tenant_id_session_id`, `IX_chat_message_tenant_id_session_id_sequence` (unique).
+
 ## pgvector
 
 `LlmDbContext.cs:12` declares `modelBuilder.HasPostgresExtension("vector")`, and
@@ -150,6 +181,8 @@ Logical relationships (no database enforcement):
 ```text
 origin.uuid ─→ embedding.origin_id ─→ chunk.embedding_id
 origin.uuid ─→ image.origin_id
+context.identifier ─→ chat_session.context_identifier
+chat_session.uuid ─→ chat_message.session_id
 ```
 
 Cascade rules are implemented in repositories:
@@ -159,14 +192,16 @@ Cascade rules are implemented in repositories:
 | an origin | its embeddings, each embedding's chunks, its images | `src/Ballware.Llm.Data.Ef/Repository/OriginBaseRepository.cs:12-42` |
 | an embedding | its chunks | `src/Ballware.Llm.Data.Ef/Repository/EmbeddingBaseRepository.cs:31-48` |
 | a chunk / an image | nothing | — |
+| a chat session | its `chat_message` rows | `src/Ballware.Llm.Data.Ef/Repository/ChatSessionBaseRepository.cs` (`BeforeRemoveAsync`) |
+| a context | its `chat_session` rows and their `chat_message` rows | `src/Ballware.Llm.Data.Ef/Repository/ContextBaseRepository.cs` (`BeforeRemoveAsync` → `IChatSessionRepository.DeleteByContextAsync`) |
 
 `EmbeddingRecreateJob` clears chunks with `ExecuteDeleteAsync` by `embedding_id` before re-embedding
 (`src/Ballware.Llm.Jobs/Internal/EmbeddingRecreateJob.cs:49`,
 `ChunkRepository.cs:29-36`).
 
-> Because there are no FKs, deleting rows directly in PostgreSQL leaves `embedding`, `image` and `chunk`
-> rows orphaned, and the Storage Service attachments are not touched either. Only the API/repository
-> path cascades correctly.
+> Because there are no FKs, deleting rows directly in PostgreSQL leaves `embedding`, `image`, `chunk` and
+> `chat_message` rows orphaned, and the Storage Service attachments are not touched either. Only the
+> API/repository path cascades correctly.
 
 ## Public vs Persistables models
 
@@ -180,14 +215,16 @@ bridges them (`src/Ballware.Llm.Data.Ef/Mapping/StorageMappingProfile.cs`):
 | annotations | `[Table]`, `[Column]`, `[Required]`, `[MaxLength]`, `TypeName` | absent |
 | vectors | `Pgvector.Vector Data` | `float[] Data` (`:35`, `:39`, `:48`) |
 | payloads | no `Content` column on `Origin` | `Origin.Content` (external payload only) |
+| ownership | `ChatSession.UserId` (NOT NULL) | `ChatSession.OwnerUserId` — mapped **Persistable → Public only**, so it is read-only inbound |
+| history | separate `chat_message` rows | `ChatSession.Messages` — filled on `byid` only, `null` on `all`/`query` |
 
 Repository interfaces the API uses: `IContextRepository`, `IOriginRepository`, `IEmbeddingRepository`,
-`IChunkRepository`, `IImageRepository` (`src/Ballware.Llm.Data/Repository/*.cs`), all extending the
-shared `ITenantableRepository<T>`.
+`IChunkRepository`, `IImageRepository`, `IChatSessionRepository` (`src/Ballware.Llm.Data/Repository/*.cs`),
+all extending the shared `ITenantableRepository<T>`.
 
 ## Migration history
 
-`src/Ballware.Llm.Data.Ef.Postgres/Migrations/` (13 migrations, EF Core `ProductVersion` 10.0.2 → 10.0.3):
+`src/Ballware.Llm.Data.Ef.Postgres/Migrations/` (14 migrations, EF Core `ProductVersion` 10.0.2 → 10.0.3):
 
 | # | Migration | Effect |
 | --- | --- | --- |
@@ -204,6 +241,7 @@ shared `ITenantableRepository<T>`.
 | 11 | `20260209075358_OriginAddGlobalRelevance` | `origin.global_relevance` |
 | 12 | `20260212134017_EmbeddingAddChunkSettings` | `embedding.max_tokens_per_chunk`, `embedding.overlap_tokens` |
 | 13 | `20260429051750_AddImageExtractionFromOrigins` | creates `image` incl. `data vector(768)` |
+| 14 | `20261124125713_AddChatSessionStore` | creates `chat_session` and `chat_message` with their indexes |
 
 Migrations are applied only when `Llm.AutoMigrations = true` (`Llm.Provider` must be `postgres`;
 [architecture.md](architecture.md)). `src/Ballware.Llm.App/appsettings.json:62` ships `false`.

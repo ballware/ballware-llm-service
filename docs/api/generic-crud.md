@@ -1,21 +1,21 @@
 # Generic CRUD operations
 
-Every LLM resource (`context`, `origin`, `embedding`, `chunk`, `image`) is mounted with the same 11
-generic editing operations from
+Every LLM resource (`context`, `origin`, `embedding`, `chunk`, `image`, `session`) is mounted with the
+same 11 generic editing operations from
 `ballware-shared-dotnet/src/Ballware.Shared.Api.Endpoints/TenantantableEditingEndpoint.cs:22-132`
-(handlers in `TenantableEndpointHandlerFactory.cs`), giving **55 of the 60 paths** in
+(handlers in `TenantableEndpointHandlerFactory.cs`) — 11 paths per resource, 66 paths in
 [../openapi/llm.json](../openapi/llm.json):
 
 ```text
-/ai/context    /ai/origin    /ai/embedding    /ai/chunk    /ai/image
+/ai/context    /ai/origin    /ai/embedding    /ai/chunk    /ai/image    /ai/session
 ```
 
-The mounts are `Startup.cs:250-254`; each passes `application="ai"`, `entity="<resource>"`, tag and
+The mounts are `Startup.cs:250-255`; each passes `application="ai"`, `entity="<resource>"`, tag and
 operation prefix `<Resource>` (PascalCase), policy `mlApi`, group `llm`.
 
 ## Operation overview
 
-`<resource>` ∈ {`context`, `origin`, `embedding`, `chunk`, `image`}:
+`<resource>` ∈ {`context`, `origin`, `embedding`, `chunk`, `image`, `session`}:
 
 | # | Method | Path | Parameters | Request body | Success response | Right candidate |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -32,7 +32,7 @@ operation prefix `<Resource>` (PascalCase), policy `mlApi`, group `llm`.
 | 11 | GET | `/ai/<resource>/download/{tenantId}/{id}` | `tenantId`, `id` (path, uuid) | – | `200`, file content | **anonymous** |
 
 Right candidates are written as `<resource>.<right>`; the full candidate evaluated in the scripts is
-`ai.<resource>.<right>` because the mount sets `application="ai"` (`Startup.cs:250-254`). The candidate
+`ai.<resource>.<right>` because the mount sets `application="ai"` (`Startup.cs:250-255`). The candidate
 grammar and the two script stages are described in
 [../concepts/tenancy-and-authorization.md](../concepts/tenancy-and-authorization.md). Source of the
 per-operation candidates: `TenantableEndpointHandlerFactory.cs:19-22` (`view`/`add`/`edit`/`delete`
@@ -69,6 +69,9 @@ constants), `:66`, `:79`, `:91`, `:110` (view/add), `:122-123`, `:140-141` (save
   Example: `GET /ai/chunk/query?identifier=embedding&embedding=<embedding-uuid>`. A missing filter
   parameter raises `ArgumentException` → `500` `application/problem+json`.
 
+- `session` accepts an optional `context` parameter on `all`/`query` to restrict the list to one chat
+  context (`ChatSessionBaseRepository.ListQuery`). Without it, the list spans all contexts of the actor.
+
 ## List vs. detail: `Origin.Content`
 
 `Origin.Content` is part of the `Origin` schema, but the payload lives in the Storage Service. Only the
@@ -76,6 +79,11 @@ constants), `:66`, `:79`, `:91`, `:110` (view/add), `:122-123`, `:140-141` (save
 `OriginPayloadRepositoryHook.cs:8-23` implements); `all` and `query` map rows directly
 (`TenantableBaseRepository.cs:106-116`) and return `Content` empty. Read
 [../concepts/payload-offloading.md](../concepts/payload-offloading.md).
+
+The same pattern applies to `ChatSession.Messages`: only `byid` fills it (the latest
+`Chat:MaxHistoryMessages` messages, ascending, hard-capped at 500); `all` and `query` return
+`Messages = null`. **`null` means "not loaded", not "empty conversation"** — read the history with
+`byid`.
 
 ## Save
 
@@ -161,8 +169,26 @@ fails inside the scheduler. See [../concepts/background-jobs.md](../concepts/bac
 > `meta.origin.primary` / `meta.embedding.primary`. Tenant metadata that only defines
 > `ai.origin.primary` will let the import job deny every item.
 
+## `session` specifics
+
+`/ai/session` reuses the generic mount but the repository narrows it down
+(`src/Ballware.Llm.Data.Ef/Repository/ChatSessionBaseRepository.cs`):
+
+| Operation | Behaviour for `session` |
+| --- | --- |
+| `all` / `query` | owner-scoped (`user_id` = acting user) unless the actor holds `ai.session.admin`; optional `context=<identifier>` filter; ordered by `last_change_stamp` descending |
+| `byid` | owner-scoped; foreign session ⇒ `404`; **includes `Messages`** |
+| `new` | returns a template with `OwnerUserId` stamped to the acting user; it does **not** persist a row — sessions are created lazily by the chat UI with the first user turn |
+| `save` / `savebatch` | **rename only.** `Title` is the only writable member; an incoming `ContextIdentifier`, `OwnerUserId` or `Messages` is dropped, and `UserId` is never re-assigned. Unknown or foreign id ⇒ `404` (`ChatSessionNotVisibleException`) |
+| `remove/{id}` | owner-scoped; deletes the session **and its `chat_message` rows**; foreign id ⇒ `404` |
+| `import` / `export` / `exporturl` / `download` | mounted by the shared helper but **unsupported**: no Quartz `JobKey.Create("import", "session")` exists and no export definition is configured. Deny them in tenant metadata (`ai.session.import`, export identifiers) |
+
+The DTO has no `UserId` member at all — ownership can never be written through the API
+(`src/Ballware.Llm.Data/Public/ChatSession.cs`). Session rows are also deleted when their `context`
+is removed.
+
 ## Status codes
 
-`401` (missing scope / denied right), `404` (tenant, entity metadata or item not found), `400`
-(remove preconditions), `500` as `application/problem+json` — see
-[../concepts/tenancy-and-authorization.md](../concepts/tenancy-and-authorization.md).
+`401` (missing scope / denied right), `404` (tenant, entity metadata or item not found — including a
+chat session owned by another user), `400` (remove preconditions), `500` as `application/problem+json`
+— see [../concepts/tenancy-and-authorization.md](../concepts/tenancy-and-authorization.md).
